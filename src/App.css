@@ -1,0 +1,39 @@
+:root {
+  --body-bg: #cfeceb;
+  --surface: #ffffff;
+  --surface-strong: #eaf8ff;
+  --text: #0f3d55;
+  --muted: #4f6f83;
+  --border: rgba(65, 184, 240, 0.25);
+  --accent: #41b8f0;
+  --accent-soft: rgba(65, 184, 240, 0.14);
+  --shadow: rgba(2, 55, 91, 0.08) 0 12px 30px;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--body-bg);
+  color: var(--text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: none;
+  background: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
