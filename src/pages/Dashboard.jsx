@@ -1,39 +1,11 @@
 import { useNavigate } from "react-router-dom";
 
-
 function Dashboard() {
   const navigate = useNavigate();
 
   const logout = () => {
     navigate("/login");
   };
-
-  const pdfDocuments = [
-    {
-      id: "pdf1",
-      title: "Certificat médical général",
-      description: "Consultation de routine et suivi prescrit.",
-      date: "01 Juin 2026",
-      status: "Validé",
-      downloadUrl: "#",
-    },
-    {
-      id: "pdf2",
-      title: "Certificat d’arrêt de travail",
-      description: "Arrêt de travail délivré pour 7 jours.",
-      date: "28 Mai 2026",
-      status: "Validé",
-      downloadUrl: "#",
-    },
-    {
-      id: "pdf3",
-      title: "Certificat de sport",
-      description: "Autorise la pratique d’activités physiques légères.",
-      date: "15 Mai 2026",
-      status: "En cours",
-      downloadUrl: "#",
-    },
-  ];
 
   return (
     <div className="dashboard-layout">
@@ -50,17 +22,19 @@ function Dashboard() {
           <a href="#overview" className="sidebar-link active">
             Accueil
           </a>
-         
-          <a href="#pdf1" className="sidebar-link">
+
+          <a
+            className="sidebar-link"
+            onClick={() => navigate("/pdf1")}
+            style={{ cursor: "pointer" }}
+          >
             PDF 1
           </a>
+
           <a href="#pdf2" className="sidebar-link">
             PDF 2
           </a>
-        
         </nav>
-
-      
       </aside>
 
       <main className="dashboard-main">
@@ -69,7 +43,7 @@ function Dashboard() {
             <span className="navbar-brand-icon">🏠</span>
             <div>
               <h1>Accueil</h1>
-              <p> certificats médicaux numériques.</p>
+              <p>certificats médicaux numériques.</p>
             </div>
           </div>
 
@@ -90,7 +64,6 @@ function Dashboard() {
           <div className="dashboard-welcome">
             <div>
               <h2>Bienvenue dans votre espace de certificats</h2>
-             
             </div>
           </div>
         </section>

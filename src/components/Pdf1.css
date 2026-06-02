@@ -1,0 +1,138 @@
+#certificate-wrapper {
+    color-scheme: light;
+    padding: 16px 20px;
+    background: #cfeceb;
+    min-width: fit-content;
+    text-align: left;
+}
+
+#certificate-wrapper .forms {
+    display: flex;
+    gap: 14px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: stretch;
+}
+
+#certificate-wrapper .forms form {
+    width: 360px;
+    height: auto;
+    min-height: 0;
+    padding: 12px;
+    border: 4px double #41b8f0;
+    border-radius: 5px;
+    background: #00999330;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  
+}
+
+#certificate-wrapper label {
+    display: block;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 3px;
+    font-weight: bold;
+    width: 100%;
+    color: #0f3d55;
+    background: transparent;
+    font-size: 13px;
+}
+
+#certificate-wrapper input,
+#certificate-wrapper textarea {
+    width: 90%;
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+    color: #000;
+    font-size: 13px;
+}
+
+#certificate-wrapper .doctor_signature {
+    height: 265px !important;
+    width: 95% !important;
+    padding: 8px !important;
+    border: 1px solid #ccc !important;
+    border-radius: 5px !important;
+    background: white !important;
+    color: #000 !important;
+}
+
+#certificate-wrapper textarea#restrictions {
+    height: 260px !important;
+    width: 95% !important;
+    resize: vertical;
+}
+
+#certificate-wrapper button {
+    display: block;
+    margin: 14px auto 0;
+    padding: 10px 24px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#certificate-wrapper table {
+    width: 100%;
+    margin: 6px 0;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: transparent;
+}
+
+#certificate-wrapper th,
+#certificate-wrapper td {
+    padding: 7px 8px;
+    text-align: left;
+    border-right: 1px solid #000000;
+    color: #0f3d55;
+    background: transparent;
+    font-size: 13px;
+}
+
+#certificate-wrapper th {
+    border-bottom: 2px solid #000000;
+    font-weight: bold;
+}
+
+#certificate-wrapper tr {
+    border-bottom: 1px solid #000000;
+}
+
+#certificate-wrapper tr:last-child {
+    border-bottom: none;
+}
+
+#certificate-wrapper td:last-child,
+#certificate-wrapper th:last-child {
+    border-right: none;
+}
+
+#certificate-wrapper input[type="date"] {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background: white;
+    color: #000;
+    color-scheme: light;
+    font-size: 13px;
+}
+
+@media (max-width: 1200px) {
+    #certificate-wrapper .forms {
+        flex-wrap: wrap;
+    }
+    #certificate-wrapper .forms form {
+        width: 100%;
+    }
+}
