@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { encryptData } from "../utils/crypto";
+import api from "../utils/api";
 
 function Register() {
   const [user, setUser] = useState({
@@ -63,27 +63,33 @@ function Register() {
 
     setLoading(true);
 
-    setTimeout(async () => {
-      const userData = {
-        name: user.name,
+    try {
+      const response = await api.post('/auth/register', {
+        username: user.name,
         email: user.email,
-      };
-
-      const encryptedUser = await encryptData(userData, user.password);
-      localStorage.setItem("user", encryptedUser);
-
-      setSuccess(true);
-      setUser({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+        password: user.password,
+        confirmPassword: user.confirmPassword,
       });
 
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
-    }, 500);
+      if (response.status === 201) {
+        setSuccess(true);
+        setUser({
+          name: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+        });
+
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'inscription';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -102,6 +108,8 @@ function Register() {
             ✓ Inscription réussie ! Redirection vers la connexion...
           </div>
         )}
+
+        {errors.submit && <div className="error-message">{errors.submit}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">

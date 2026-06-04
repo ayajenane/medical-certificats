@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { decryptData } from "../utils/crypto";
+import api from "../utils/api";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -21,29 +21,29 @@ function Login() {
 
     setLoading(true);
 
-    setTimeout(async () => {
-      const encryptedUser = localStorage.getItem("user");
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+      });
 
-      if (!encryptedUser) {
-        setError("Aucun utilisateur trouvé. Inscrivez-vous d'abord.");
-        setLoading(false);
-        return;
+      if (response.status === 200) {
+        const { token, user } = response.data;
+        
+        // Stocker le token dans localStorage
+        localStorage.setItem('token', token);
+        
+        // Stocker les infos utilisateur dans sessionStorage
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        
+        navigate("/dashboard");
       }
-
-      try {
-        const user = await decryptData(encryptedUser, password);
-
-        if (user.email === email) {
-          navigate("/dashboard");
-        } else {
-          setError("Email ou mot de passe incorrect");
-        }
-      } catch (err) {
-        setError("Email ou mot de passe incorrect");
-      }
-
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Erreur de connexion';
+      setError(errorMessage);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
