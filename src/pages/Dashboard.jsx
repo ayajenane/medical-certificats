@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  PieChart, Pie, Cell, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
+import {
+  Users, CheckCircle, AlertTriangle, XCircle,
+  FileText, Bell, Search, Calendar,
+} from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { getPilots, initPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
 
@@ -24,17 +33,54 @@ const CERT_FORMS = [
   },
 ];
 
+const STATUS_COLORS = {
+  valid:    "#22C55E",
+  expiring: "#F59E0B",
+  expired:  "#EF4444",
+};
+
 function getCurrentDate() {
   return new Date().toLocaleDateString("fr-FR", {
     day: "numeric", month: "long", year: "numeric",
   });
 }
 
+const CustomPieTooltip = ({ active, payload }) => {
+  if (active && payload?.length) {
+    return (
+      <div className="chart-tooltip">
+        {payload[0].name} : <strong>{payload[0].value}</strong>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomBarTooltip = ({ active, payload, label }) => {
+  if (active && payload?.length) {
+    return (
+      <div className="chart-tooltip">
+        {label} : <strong>{payload[0].value}</strong>
+      </div>
+    );
+  }
+  return null;
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, delay: i * 0.07, ease: "easeOut" },
+  }),
+};
+
 function Dashboard() {
-  const navigate = useNavigate();
-  const [user, setUser]       = useState(null);
-  const [pilots, setPilots]   = useState([]);
-  const [search, setSearch]   = useState("");
+  const navigate  = useNavigate();
+  const [user, setUser]               = useState(null);
+  const [pilots, setPilots]           = useState([]);
+  const [search, setSearch]           = useState("");
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   useEffect(() => {
@@ -45,24 +91,34 @@ function Dashboard() {
     setPilots(getPilots());
   }, [navigate]);
 
-  const logout = () => { sessionStorage.removeItem("currentUser"); localStorage.removeItem("token"); navigate("/login"); };
-
   if (!user) return null;
 
   const activePilots   = pilots.filter((p) => !p.archived);
+  const validPilots    = activePilots.filter((p) => computeStatus(p.expiryDate) === "active");
   const expiringPilots = activePilots.filter((p) => computeStatus(p.expiryDate) === "expiring");
   const expiredPilots  = activePilots.filter((p) => computeStatus(p.expiryDate) === "expired");
-  const validPilots    = activePilots.filter((p) => computeStatus(p.expiryDate) === "active");
 
   const stats = [
-    { label: "Total pilotes", value: activePilots.length,   note: "Hors archivés" },
-    { label: "Certificats valides",  value: validPilots.length,    note: "En cours de validité" },
-    { label: "Expirations proches", value: expiringPilots.length, note: "< 30 jours" },
-    { label: "Certificats expirés", value: expiredPilots.length, note: "À régulariser" },
+    { label: "Total pilotes",        value: activePilots.length,   note: "Hors archivés",       icon: Users,         color: "blue"   },
+    { label: "Certificats valides",  value: validPilots.length,    note: "En cours de validité", icon: CheckCircle,   color: "green"  },
+    { label: "Expirations proches",  value: expiringPilots.length, note: "< 30 jours",           icon: AlertTriangle, color: "orange" },
+    { label: "Certificats expirés",  value: expiredPilots.length,  note: "À régulariser",        icon: XCircle,       color: "red"    },
   ];
 
-  const showAlert = !alertDismissed && (expiringPilots.length > 0 || expiredPilots.length > 0);
+  const pieData = [
+    { name: "Valides",         value: validPilots.length,    color: STATUS_COLORS.valid    },
+    { name: "Bientôt expirés", value: expiringPilots.length, color: STATUS_COLORS.expiring },
+    { name: "Expirés",         value: expiredPilots.length,  color: STATUS_COLORS.expired  },
+  ].filter((d) => d.value > 0);
 
+  const licenseData = ["ATPL", "CPL", "PPL", "ATCO", "Autre"]
+    .map((type) => ({
+      type,
+      count: activePilots.filter((p) => p.licenseType === type).length,
+    }))
+    .filter((d) => d.count > 0);
+
+  const showAlert = !alertDismissed && (expiringPilots.length > 0 || expiredPilots.length > 0);
   const firstName = user.username?.split(" ")[0] ?? "";
 
   const filteredForms = CERT_FORMS.filter((f) =>
@@ -71,44 +127,53 @@ function Dashboard() {
   );
 
   return (
-    <div className="dashboard-layout">
+    <div className="app-layout">
       <Sidebar activePage="dashboard" />
 
-      <main className="dashboard-main">
-        <header className="dashboard-navbar">
-          <div className="navbar-info">
-            <span className="navbar-subtitle">Direction Générale de l'Aviation Civile</span>
-            <h1>Gestion des certificats médicaux des pilotes</h1>
+      <div className="main-content">
+        {/* Navbar */}
+        <header className="navbar">
+          <div className="navbar-left">
+            <span className="navbar-eyebrow">Direction Générale de l'Aviation Civile</span>
+            <h1 className="navbar-title">Tableau de bord</h1>
           </div>
-          <div className="navbar-actions">
-            <label className="search-box">
-              <span className="search-icon">🔍</span>
+          <div className="navbar-right">
+            <div className="search-wrapper">
+              <Search size={15} className="search-icon-inner" />
               <input
-                type="text"
                 className="search-input"
-                placeholder="Rechercher un pilote, un certificat..."
+                type="text"
+                placeholder="Rechercher un certificat..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </label>
-            <button className="icon-button" type="button" aria-label="Aide">?</button>
-            <button className="icon-button" type="button" aria-label="Notifications">🔔</button>
-            <div className="user-chip">
-              <span className="user-initials">{firstName ? firstName[0] : "I"}</span>
-              <div className="user-info">
-                <strong>{user.username || "Inspecteur"}</strong>
-                <span>Inspecteur médical</span>
+            </div>
+            <button className="navbar-icon-btn" aria-label="Notifications">
+              <Bell size={17} />
+            </button>
+            <div className="navbar-user">
+              <div className="navbar-avatar">
+                {firstName ? firstName[0].toUpperCase() : "?"}
+              </div>
+              <div>
+                <p className="navbar-username">{user.username || "Inspecteur"}</p>
+                <p className="navbar-role">Inspecteur médical</p>
               </div>
             </div>
           </div>
         </header>
 
-        <section className="dashboard-content">
-          {/* Alerte expiration */}
+        <main className="page-content">
+          {/* Alert */}
           {showAlert && (
-            <div className="alert-banner">
+            <motion.div
+              className="alert-banner"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
               <div className="alert-content">
-                <span className="alert-icon">⚠️</span>
+                <AlertTriangle size={18} className="alert-icon" />
                 <div>
                   {expiredPilots.length > 0 && (
                     <p><strong>{expiredPilots.length} certificat(s) expiré(s)</strong> — action requise immédiatement.</p>
@@ -129,58 +194,139 @@ function Dashboard() {
                 </button>
               </div>
               <button className="alert-dismiss" onClick={() => setAlertDismissed(true)}>✕</button>
-            </div>
+            </motion.div>
           )}
 
-          {/* Bienvenue */}
-          <div className="dashboard-welcome">
+          {/* Welcome banner */}
+          <div className="welcome-banner">
             <div>
-              <h2>Bienvenue, {firstName}</h2>
-              <p style={{ color: "var(--muted)", marginTop: "6px" }}>
-                Vue d'ensemble des certificats et rappels administratifs.
-              </p>
+              <h2>Bonjour, {firstName} 👋</h2>
+              <p>Vue d'ensemble des certifications médicales des pilotes.</p>
             </div>
-            <p style={{ color: "var(--muted)", fontSize: "14px", whiteSpace: "nowrap" }}>
-              Date de consultation&nbsp;: {getCurrentDate()}
-            </p>
+            <span className="welcome-date">
+              <Calendar size={13} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
+              {getCurrentDate()}
+            </span>
           </div>
 
-          {/* Stats */}
-          <div className="dashboard-cards">
-            {stats.map((s) => (
-              <div className="dashboard-card" key={s.label}>
-                <h3>{s.label}</h3>
-                <p>{s.value}</p>
-                <span>{s.note}</span>
-              </div>
+          {/* Stat cards */}
+          <div className="stats-grid">
+            {stats.map((s, i) => (
+              <motion.div
+                key={s.label}
+                className="stat-card"
+                custom={i}
+                initial="hidden"
+                animate="visible"
+                variants={cardVariants}
+              >
+                <div className="stat-card-body">
+                  <div className="stat-value">{s.value}</div>
+                  <div className="stat-label">{s.label}</div>
+                  <div className="stat-note">{s.note}</div>
+                </div>
+                <div className={`stat-icon ${s.color}`}>
+                  <s.icon size={22} />
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Liste des formulaires certificats */}
-          <div className="panel">
-            <div className="panel-header">
-              <div>
-                <h3>Formulaires de certificats</h3>
-                <p>Choisissez le formulaire adapté et générez le PDF officiel.</p>
+          {/* Charts */}
+          {activePilots.length > 0 && (
+            <div className="charts-grid">
+              {/* Pie Chart */}
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <h3>Répartition des certificats</h3>
+                    <p>Distribution par statut de validité</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomPieTooltip />} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value) => (
+                        <span style={{ fontSize: 12, color: "#475569" }}>{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Bar Chart */}
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <h3>Pilotes par type de licence</h3>
+                    <p>Répartition selon la qualification</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={licenseData} barSize={32}>
+                    <XAxis
+                      dataKey="type"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "#64748B" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "#64748B" }}
+                    />
+                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#EFF6FF" }} />
+                    <Bar dataKey="count" name="Pilotes" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
+          )}
 
-            <div className="pdf-list">
+          {/* Certificate forms */}
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3>Formulaires de certificats médicaux</h3>
+                <p>Sélectionnez le formulaire adapté et générez le document officiel.</p>
+              </div>
+            </div>
+            <div className="cert-list">
               {filteredForms.map((doc) => (
-                <div className="pdf-card" key={doc.id}>
-                  <div className="pdf-card-title">
-                    <div>
-                      <h4>{doc.title}</h4>
-                      <p>{doc.description}</p>
+                <div className="cert-card" key={doc.id}>
+                  <div className="cert-card-left">
+                    <div className="cert-icon">
+                      <FileText size={18} />
                     </div>
-                    <span className={`pdf-badge${doc.route ? " pdf-badge-success" : ""}`}>
+                    <div>
+                      <div className="cert-title">{doc.title}</div>
+                      <div className="cert-desc">{doc.description}</div>
+                    </div>
+                  </div>
+                  <div className="cert-card-right">
+                    <span className={`badge ${doc.route ? "badge-available" : "badge-soon"}`}>
                       {doc.route ? "Disponible" : "Bientôt"}
                     </span>
-                  </div>
-                  <div className="pdf-card-meta">
                     {doc.route && (
-                      <button className="pdf-button" onClick={() => navigate(doc.route)}>
-                        Ouvrir le formulaire →
+                      <button className="btn btn-primary" onClick={() => navigate(doc.route)}>
+                        Ouvrir →
                       </button>
                     )}
                   </div>
@@ -188,8 +334,8 @@ function Dashboard() {
               ))}
             </div>
           </div>
-        </section>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
