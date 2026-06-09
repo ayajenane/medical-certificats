@@ -127,14 +127,7 @@ function Login() {
             </button>
           </form>
 
-          <div className="auth-divider">ou</div>
-
-          <p className="auth-footer">
-            Pas encore de compte ?{" "}
-            <Link to="/register" className="auth-link">
-              Créer un compte
-            </Link>
-          </p>
+      
         </div>
       </motion.div>
     </div>

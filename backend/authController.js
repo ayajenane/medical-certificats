@@ -21,7 +21,7 @@ export const register = async (req, res) => {
 
     if (password.length < 6) {
       return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
-    }
+    } 
 
     let user = await User.findOne({ email });
     if (user) {
@@ -32,20 +32,19 @@ export const register = async (req, res) => {
       username,
       email,
       password,
+      role: 'admin',
     });
 
     await user.save();
 
-    const token = generateToken(user._id);
-
     res.status(201).json({
       success: true,
-      message: 'Inscription réussie',
-      token,
+      message: 'Compte administrateur créé avec succès',
       user: {
         _id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
     });
@@ -84,6 +83,7 @@ export const login = async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
     });

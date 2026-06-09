@@ -7,6 +7,7 @@ import {
   LogOut,
   Shield,
   ChevronRight,
+  UserPlus,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -21,9 +22,15 @@ const CERT_ITEMS = [
   { key: "pdf3", label: "Classe 3 — Contrôleur", icon: FileText, path: null,    available: false },
 ];
 
+const ROLE_LABELS = {
+  superadmin: "Super Administrateur",
+  admin: "Inspecteur médical",
+};
+
 function Sidebar({ activePage }) {
   const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+  const isSuperAdmin = user.role === "superadmin";
 
   const initials = (user.username || "")
     .split(" ")
@@ -66,6 +73,22 @@ function Sidebar({ activePage }) {
           </button>
         ))}
 
+        {isSuperAdmin && (
+          <>
+            <span className="sidebar-section" style={{ marginTop: 8 }}>
+              Administration
+            </span>
+            <button
+              className={`sidebar-item${activePage === "create-admin" ? " active" : ""}`}
+              onClick={() => navigate("/register")}
+            >
+              <UserPlus size={17} />
+              <span>Créer un admin</span>
+              {activePage === "create-admin" && <ChevronRight size={13} className="sidebar-item-arrow" />}
+            </button>
+          </>
+        )}
+
         <span className="sidebar-section" style={{ marginTop: 8 }}>
           Certificats médicaux
         </span>
@@ -89,7 +112,7 @@ function Sidebar({ activePage }) {
           <div className="sidebar-avatar">{initials}</div>
           <div className="sidebar-user-info">
             <span className="sidebar-user-name">{user.username || "AME"}</span>
-            <span className="sidebar-user-role">Inspecteur médical</span>
+            <span className="sidebar-user-role">{ROLE_LABELS[user.role] || "Inspecteur médical"}</span>
           </div>
         </div>
         <button className="sidebar-logout" onClick={logout} title="Déconnexion">

@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Le mot de passe doit contenir au moins 6 caractères'],
     select: false,
   },
+  role: {
+    type: String,
+    enum: ['superadmin', 'admin'],
+    default: 'admin',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

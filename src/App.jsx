@@ -7,7 +7,15 @@ import History from "./pages/History";
 import Pdf1 from "./components/Pdf1";
 
 function isAuthenticated() {
-  return !!sessionStorage.getItem("currentUser") || !!localStorage.getItem("token");
+  return !!sessionStorage.getItem("currentUser");
+}
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+  } catch {
+    return {};
+  }
 }
 
 function GuestRoute({ children }) {
@@ -18,12 +26,19 @@ function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 }
 
+function SuperAdminRoute({ children }) {
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  const user = getCurrentUser();
+  if (user.role !== "superadmin") return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+        <Route path="/register" element={<SuperAdminRoute><Register /></SuperAdminRoute>} />
         <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/pilots"    element={<ProtectedRoute><Pilots /></ProtectedRoute>} />

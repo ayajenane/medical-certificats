@@ -1,6 +1,13 @@
 import jwt from 'jsonwebtoken';
 import User from './User.js';
 
+export const isSuperAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'superadmin') {
+    return next();
+  }
+  res.status(403).json({ message: 'Accès réservé au super administrateur' });
+};
+
 export const protect = async (req, res, next) => {
   try {
     let token;
