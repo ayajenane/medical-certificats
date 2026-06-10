@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Archive, RotateCcw, Trash2, Plus, Search, Users } from "lucide-react";
+import { FileText, Archive, RotateCcw, RefreshCw, Trash2, Plus, Search, Users } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import {
   getPilots, addPilot, archivePilot, restorePilot,
-  deletePilot, initPilots, computeStatus, daysUntilExpiry,
+  deletePilot, renewPilot, computeStatus, daysUntilExpiry,
 } from "../utils/pilots";
 
 const STATUS_CONFIG = {
@@ -31,14 +31,23 @@ function Pilots() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
+  const [renewTarget, setRenewTarget] = useState(null);
+  const [renewDate, setRenewDate]     = useState("");
+  const [error, setError]         = useState("");
+
+  const refresh = async () => {
+    try {
+      setPilots(await getPilots());
+      setError("");
+    } catch {
+      setError("Impossible de charger les pilotes.");
+    }
+  };
 
   useEffect(() => {
     if (!sessionStorage.getItem("currentUser")) { navigate("/login"); return; }
-    initPilots();
-    setPilots(getPilots());
+    refresh();
   }, [navigate]);
-
-  const refresh = () => setPilots(getPilots());
 
   const visible = pilots
     .filter((p) => (showArchived ? p.archived : !p.archived))
@@ -62,23 +71,44 @@ function Pilots() {
     expired:  pilots.filter((p) => !p.archived && computeStatus(p.expiryDate) === "expired").length,
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name.trim() || !form.expiryDate) {
       setFormError("Le nom et la date d'expiration sont requis.");
       return;
     }
-    addPilot(form);
-    refresh();
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-    setFormError("");
+    try {
+      await addPilot(form);
+      await refresh();
+      setShowModal(false);
+      setForm(EMPTY_FORM);
+      setFormError("");
+    } catch (err) {
+      setFormError(err.response?.data?.message || "Erreur lors de l'ajout du pilote.");
+    }
   };
 
-  const handleArchive = (id) => { archivePilot(id); refresh(); };
-  const handleRestore = (id) => { restorePilot(id); refresh(); };
-  const handleDelete  = (id) => {
+  const handleArchive = async (id) => { await archivePilot(id); refresh(); };
+  const handleRestore = async (id) => { await restorePilot(id); refresh(); };
+  const handleDelete  = async (id) => {
     if (window.confirm("Supprimer définitivement ce pilote ?")) {
-      deletePilot(id); refresh();
+      await deletePilot(id); refresh();
+    }
+  };
+
+  const openRenew = (pilot) => {
+    setRenewTarget(pilot);
+    setRenewDate(pilot.expiryDate ? pilot.expiryDate.slice(0, 10) : "");
+  };
+
+  const handleRenew = async () => {
+    if (!renewDate) return;
+    try {
+      await renewPilot(renewTarget.id, renewDate);
+      await refresh();
+      setRenewTarget(null);
+      setRenewDate("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors du renouvellement.");
     }
   };
 
@@ -105,6 +135,8 @@ function Pilots() {
         </header>
 
         <main className="page-content">
+          {error && <p className="error-inline">{error}</p>}
+
           {/* Search */}
           <div className="search-bar">
             <Search size={15} className="search-bar-icon" />
@@ -205,6 +237,13 @@ function Pilots() {
                               onClick={() => navigate("/pdf1")}
                             >
                               <FileText size={14} />
+                            </button>
+                            <button
+                              className="action-btn"
+                              title="Renouveler"
+                              onClick={() => openRenew(p)}
+                            >
+                              <RefreshCw size={14} />
                             </button>
                             <button
                               className="action-btn"
@@ -318,6 +357,55 @@ function Pilots() {
                 </button>
                 <button className="btn btn-primary" onClick={handleAdd}>
                   Ajouter le pilote
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Renew modal */}
+      <AnimatePresence>
+        {renewTarget && (
+          <motion.div
+            className="modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="modal"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h3 className="modal-title">Renouveler le certificat</h3>
+              <p className="pilot-sub">
+                Pilote : <strong>{renewTarget.name}</strong>
+              </p>
+
+              <div className="modal-form">
+                <div className="form-field">
+                  <label>Nouvelle date d'expiration *</label>
+                  <input
+                    type="date"
+                    value={renewDate}
+                    onChange={(e) => setRenewDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => { setRenewTarget(null); setRenewDate(""); }}
+                >
+                  Annuler
+                </button>
+                <button className="btn btn-primary" onClick={handleRenew}>
+                  Renouveler
                 </button>
               </div>
             </motion.div>

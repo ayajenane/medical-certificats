@@ -10,7 +10,7 @@ import {
   FileText, Bell, Search, Calendar,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
-import { getPilots, initPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
+import { getPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
 
 const CERT_FORMS = [
   {
@@ -87,8 +87,7 @@ function Dashboard() {
     const stored = sessionStorage.getItem("currentUser");
     if (!stored) { navigate("/login"); return; }
     setUser(JSON.parse(stored));
-    initPilots();
-    setPilots(getPilots());
+    getPilots().then(setPilots).catch(() => setPilots([]));
   }, [navigate]);
 
   if (!user) return null;
