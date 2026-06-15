@@ -7,10 +7,12 @@ import {
 } from "recharts";
 import {
   Users, CheckCircle, AlertTriangle, XCircle,
-  FileText, Bell, Search, Calendar,
+  FileText, Bell, Search, Calendar, Clock,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { getPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
+import { getDashboardStats } from "../utils/dashboard";
+import { ACTION_CONFIG, formatRelativeTime } from "../utils/historyDisplay";
 
 const CERT_FORMS = [
   {
@@ -78,17 +80,20 @@ const cardVariants = {
 
 function Dashboard() {
   const navigate  = useNavigate();
-  const [user, setUser]               = useState(null);
+  const [user]                        = useState(() => {
+    const stored = sessionStorage.getItem("currentUser");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [pilots, setPilots]           = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
   const [search, setSearch]           = useState("");
   const [alertDismissed, setAlertDismissed] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("currentUser");
-    if (!stored) { navigate("/login"); return; }
-    setUser(JSON.parse(stored));
-    getPilots().then(setPilots).catch(() => setPilots([]));
-  }, [navigate]);
+    if (!user) { navigate("/login"); return; }
+    getPilots({ archived: false, limit: 1000 }).then((res) => setPilots(res.data)).catch(() => setPilots([]));
+    getDashboardStats().then(setDashboardStats).catch(() => {});
+  }, [navigate, user]);
 
   if (!user) return null;
 
@@ -98,10 +103,11 @@ function Dashboard() {
   const expiredPilots  = activePilots.filter((p) => computeStatus(p.expiryDate) === "expired");
 
   const stats = [
-    { label: "Total pilotes",        value: activePilots.length,   note: "Hors archivés",       icon: Users,         color: "blue"   },
-    { label: "Certificats valides",  value: validPilots.length,    note: "En cours de validité", icon: CheckCircle,   color: "green"  },
-    { label: "Expirations proches",  value: expiringPilots.length, note: "< 30 jours",           icon: AlertTriangle, color: "orange" },
-    { label: "Certificats expirés",  value: expiredPilots.length,  note: "À régulariser",        icon: XCircle,       color: "red"    },
+    { label: "Total pilotes",        value: dashboardStats?.totalPilots ?? activePilots.length,            note: "Hors archivés",         icon: Users,         color: "blue"   },
+    { label: "Certificats actifs",   value: dashboardStats?.activeCertificates ?? validPilots.length,      note: "En cours de validité",  icon: CheckCircle,   color: "green"  },
+    { label: "Expirations proches",  value: dashboardStats?.expiringCertificates ?? expiringPilots.length, note: "< 30 jours",             icon: AlertTriangle, color: "orange" },
+    { label: "Certificats expirés",  value: dashboardStats?.expiredCertificates ?? expiredPilots.length,   note: "À régulariser",          icon: XCircle,       color: "red"    },
+    { label: "Certificats ce mois",  value: dashboardStats?.certificatesThisMonth ?? 0,                    note: "Générés ce mois-ci",     icon: FileText,      color: "blue"   },
   ];
 
   const pieData = [
@@ -298,6 +304,42 @@ function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* Dernières activités */}
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <h3>Dernières activités</h3>
+                <p>Actions récentes sur les dossiers pilotes et certificats.</p>
+              </div>
+              <button className="btn btn-secondary" onClick={() => navigate("/history")}>
+                Voir tout
+              </button>
+            </div>
+            {dashboardStats?.recentActivity?.length > 0 ? (
+              <div className="activity-feed">
+                {dashboardStats.recentActivity.map((h) => {
+                  const cfg = ACTION_CONFIG[h.action] || { label: h.action, cls: "badge-unknown", icon: Clock };
+                  const Icon = cfg.icon;
+                  return (
+                    <div className="activity-item" key={h.id}>
+                      <div className="activity-icon"><Icon size={16} /></div>
+                      <div className="activity-body">
+                        <p className="activity-title">{cfg.label} — {h.pilotName}</p>
+                        <p className="activity-sub">{h.performedBy?.username || "Système"}</p>
+                      </div>
+                      <span className="activity-time">{formatRelativeTime(h.createdAt)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <Clock size={32} strokeWidth={1.5} />
+                <p>Aucune activité récente.</p>
+              </div>
+            )}
+          </div>
 
           {/* Certificate forms */}
           <div className="card">

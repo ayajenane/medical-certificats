@@ -11,9 +11,10 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { key: "dashboard", label: "Tableau de bord",     icon: LayoutDashboard, path: "/dashboard" },
-  { key: "pilots",    label: "Gestion des pilotes",  icon: Users,           path: "/pilots"    },
-  { key: "history",   label: "Historique",           icon: History,         path: "/history"   },
+  { key: "dashboard",    label: "Tableau de bord",     icon: LayoutDashboard, path: "/dashboard"    },
+  { key: "pilots",       label: "Gestion des pilotes", icon: Users,           path: "/pilots"       },
+  { key: "certificates", label: "Certificats",         icon: FileText,        path: "/certificates" },
+  { key: "history",      label: "Historique",          icon: History,         path: "/history"      },
 ];
 
 const CERT_ITEMS = [

@@ -1,12 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Archive, RotateCcw, RefreshCw, Trash2, Plus, Search, Users } from "lucide-react";
-import Sidebar from "../components/Sidebar";
 import {
-  getPilots, addPilot, archivePilot, restorePilot,
+  FileText, Archive, RotateCcw, RefreshCw, Trash2, Plus, Search, Users,
+  Pencil, Eye, ChevronLeft, ChevronRight, Clock,
+} from "lucide-react";
+import Sidebar from "../components/Sidebar";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { useToast } from "../context/ToastContext";
+import {
+  getPilots, addPilot, updatePilot, archivePilot, restorePilot,
   deletePilot, renewPilot, computeStatus, daysUntilExpiry,
 } from "../utils/pilots";
+import { getCertificatesByPilot } from "../utils/certificates";
+import { getPilotHistory } from "../utils/pilotHistory";
+import { ACTION_CONFIG, formatDate } from "../utils/historyDisplay";
 
 const STATUS_CONFIG = {
   active:   { label: "Actif",          cls: "badge-active"   },
@@ -17,81 +25,201 @@ const STATUS_CONFIG = {
 
 const LICENSE_TYPES = ["ATPL", "CPL", "PPL", "ATCO", "Autre"];
 
+const SORT_OPTIONS = [
+  { value: "-createdAt", label: "Plus récents d'abord" },
+  { value: "createdAt",  label: "Plus anciens d'abord" },
+  { value: "name",       label: "Nom (A → Z)" },
+  { value: "-name",      label: "Nom (Z → A)" },
+  { value: "expiryDate", label: "Expiration (croissant)" },
+  { value: "-expiryDate", label: "Expiration (décroissant)" },
+];
+
 const EMPTY_FORM = {
-  name: "", email: "", licenseNumber: "",
+  name: "", email: "", licenseNumber: "", certificateNumber: "",
   licenseType: "ATPL", nationality: "", medicalClass: "1", expiryDate: "",
 };
 
+const FORM_FIELDS = [
+  { name: "name",              label: "Nom complet *",         type: "text",  placeholder: "Jean Dupont"        },
+  { name: "email",             label: "Email",                 type: "email", placeholder: "pilote@example.com" },
+  { name: "licenseNumber",     label: "N° Licence",            type: "text",  placeholder: "FR-ATPL-001"        },
+  { name: "certificateNumber", label: "N° Certificat médical", type: "text",  placeholder: "CM-2026-001"        },
+  { name: "nationality",       label: "Nationalité",           type: "text",  placeholder: "Française"          },
+  { name: "expiryDate",        label: "Date d'expiration *",   type: "date",  placeholder: ""                   },
+];
+
 function Pilots() {
   const navigate = useNavigate();
-  const [pilots, setPilots]       = useState([]);
-  const [search, setSearch]       = useState("");
-  const [filter, setFilter]       = useState("all");
-  const [showArchived, setShowArchived] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState("");
+  const toast = useToast();
+
+  const [pilots, setPilots]         = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
+  const [counts, setCounts]         = useState({ all: 0, active: 0, expiring: 0, expired: 0 });
+
+  const [search, setSearch]                 = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter]                 = useState("all");
+  const [showArchived, setShowArchived]     = useState(false);
+  const [sort, setSort]                     = useState("-createdAt");
+  const [page, setPage]                     = useState(1);
+  const [loading, setLoading]               = useState(true);
+  const [refreshTick, setRefreshTick]       = useState(0);
+
+  const [showModal, setShowModal]   = useState(false);
+  const [editingPilot, setEditingPilot] = useState(null);
+  const [form, setForm]             = useState(EMPTY_FORM);
+  const [formError, setFormError]   = useState("");
+
+  const [viewTarget, setViewTarget]         = useState(null);
+  const [viewCertificates, setViewCertificates] = useState([]);
+  const [viewHistory, setViewHistory]       = useState([]);
+  const [viewLoading, setViewLoading]       = useState(false);
+
   const [renewTarget, setRenewTarget] = useState(null);
   const [renewDate, setRenewDate]     = useState("");
-  const [error, setError]         = useState("");
 
-  const refresh = async () => {
-    try {
-      setPilots(await getPilots());
-      setError("");
-    } catch {
-      setError("Impossible de charger les pilotes.");
-    }
-  };
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const refresh = () => setRefreshTick((t) => t + 1);
+
+  // Débounce de la recherche
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Revient à la page 1 lorsque les filtres/tri/recherche changent
+  const filtersRef = useRef({ filter, showArchived, sort, debouncedSearch });
 
   useEffect(() => {
     if (!sessionStorage.getItem("currentUser")) { navigate("/login"); return; }
-    refresh();
-  }, [navigate]);
 
-  const visible = pilots
-    .filter((p) => (showArchived ? p.archived : !p.archived))
-    .filter((p) => {
-      const s = computeStatus(p.expiryDate);
-      return filter === "all" || s === filter;
-    })
-    .filter((p) => {
-      const q = search.toLowerCase();
-      return (
-        p.name.toLowerCase().includes(q) ||
-        (p.licenseNumber || "").toLowerCase().includes(q) ||
-        (p.email || "").toLowerCase().includes(q)
-      );
-    });
+    const filtersChanged =
+      filtersRef.current.filter !== filter ||
+      filtersRef.current.showArchived !== showArchived ||
+      filtersRef.current.sort !== sort ||
+      filtersRef.current.debouncedSearch !== debouncedSearch;
+    filtersRef.current = { filter, showArchived, sort, debouncedSearch };
+    const targetPage = filtersChanged ? 1 : page;
 
-  const counts = {
-    all:      pilots.filter((p) => !p.archived).length,
-    active:   pilots.filter((p) => !p.archived && computeStatus(p.expiryDate) === "active").length,
-    expiring: pilots.filter((p) => !p.archived && computeStatus(p.expiryDate) === "expiring").length,
-    expired:  pilots.filter((p) => !p.archived && computeStatus(p.expiryDate) === "expired").length,
+    let cancelled = false;
+    setLoading(true);
+    getPilots({ search: debouncedSearch, status: filter, archived: showArchived, sort, page: targetPage, limit: 10 })
+      .then((res) => {
+        if (cancelled) return;
+        setPilots(res.data);
+        setPagination(res.pagination);
+        setCounts(res.counts);
+        if (filtersChanged) setPage(1);
+      })
+      .catch(() => { if (!cancelled) toast.error("Impossible de charger les pilotes."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [navigate, page, filter, showArchived, sort, debouncedSearch, refreshTick, toast]);
+
+  // Charge certificats + historique récent du pilote consulté
+  useEffect(() => {
+    if (!viewTarget) return;
+    let cancelled = false;
+    setViewLoading(true);
+    Promise.all([
+      getCertificatesByPilot(viewTarget.id),
+      getPilotHistory({ pilotId: viewTarget.id, limit: 5 }),
+    ])
+      .then(([certs, hist]) => {
+        if (cancelled) return;
+        setViewCertificates(certs);
+        setViewHistory(hist.data);
+      })
+      .catch(() => { if (!cancelled) toast.error("Impossible de charger les détails du pilote."); })
+      .finally(() => { if (!cancelled) setViewLoading(false); });
+    return () => { cancelled = true; };
+  }, [viewTarget, toast]);
+
+  const closeFormModal = () => {
+    setShowModal(false);
+    setEditingPilot(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
   };
 
-  const handleAdd = async () => {
+  const openAddModal = () => {
+    setEditingPilot(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (pilot) => {
+    setEditingPilot(pilot);
+    setForm({
+      name: pilot.name || "",
+      email: pilot.email || "",
+      licenseNumber: pilot.licenseNumber || "",
+      certificateNumber: pilot.certificateNumber || "",
+      licenseType: pilot.licenseType || "ATPL",
+      nationality: pilot.nationality || "",
+      medicalClass: pilot.medicalClass || "1",
+      expiryDate: pilot.expiryDate ? pilot.expiryDate.slice(0, 10) : "",
+    });
+    setFormError("");
+    setShowModal(true);
+  };
+
+  const handleSubmitForm = async () => {
     if (!form.name.trim() || !form.expiryDate) {
       setFormError("Le nom et la date d'expiration sont requis.");
       return;
     }
     try {
-      await addPilot(form);
-      await refresh();
-      setShowModal(false);
-      setForm(EMPTY_FORM);
-      setFormError("");
+      if (editingPilot) {
+        await updatePilot(editingPilot.id, form);
+        toast.success("Pilote modifié avec succès.");
+      } else {
+        await addPilot(form);
+        toast.success("Pilote ajouté avec succès.");
+      }
+      closeFormModal();
+      refresh();
     } catch (err) {
-      setFormError(err.response?.data?.message || "Erreur lors de l'ajout du pilote.");
+      setFormError(err.response?.data?.message || "Erreur lors de l'enregistrement du pilote.");
     }
   };
 
-  const handleArchive = async (id) => { await archivePilot(id); refresh(); };
-  const handleRestore = async (id) => { await restorePilot(id); refresh(); };
-  const handleDelete  = async (id) => {
-    if (window.confirm("Supprimer définitivement ce pilote ?")) {
-      await deletePilot(id); refresh();
+  const handleArchive = async (id) => {
+    try {
+      await archivePilot(id);
+      toast.success("Pilote archivé.");
+      refresh();
+    } catch {
+      toast.error("Erreur lors de l'archivage du pilote.");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await restorePilot(id);
+      toast.success("Pilote restauré.");
+      refresh();
+    } catch {
+      toast.error("Erreur lors de la restauration du pilote.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deletePilot(deleteTarget.id);
+      toast.success("Pilote supprimé avec succès.");
+      if (pilots.length === 1 && pagination.page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        refresh();
+      }
+    } catch {
+      toast.error("Erreur lors de la suppression du pilote.");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -104,12 +232,19 @@ function Pilots() {
     if (!renewDate) return;
     try {
       await renewPilot(renewTarget.id, renewDate);
-      await refresh();
+      toast.success("Certificat renouvelé avec succès.");
       setRenewTarget(null);
       setRenewDate("");
+      refresh();
     } catch (err) {
-      setError(err.response?.data?.message || "Erreur lors du renouvellement.");
+      toast.error(err.response?.data?.message || "Erreur lors du renouvellement.");
     }
+  };
+
+  const closeView = () => {
+    setViewTarget(null);
+    setViewCertificates([]);
+    setViewHistory([]);
   };
 
   return (
@@ -124,10 +259,7 @@ function Pilots() {
             <h1 className="navbar-title">Gestion des pilotes</h1>
           </div>
           <div className="navbar-right">
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowModal(true)}
-            >
+            <button className="btn btn-primary" onClick={openAddModal}>
               <Plus size={16} />
               Ajouter un pilote
             </button>
@@ -135,18 +267,23 @@ function Pilots() {
         </header>
 
         <main className="page-content">
-          {error && <p className="error-inline">{error}</p>}
-
-          {/* Search */}
-          <div className="search-bar">
-            <Search size={15} className="search-bar-icon" />
-            <input
-              className="search-bar-input"
-              type="text"
-              placeholder="Rechercher par nom, numéro de licence ou email…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          {/* Toolbar : recherche + tri */}
+          <div className="toolbar">
+            <div className="search-bar">
+              <Search size={15} className="search-bar-icon" />
+              <input
+                className="search-bar-input"
+                type="text"
+                placeholder="Rechercher par nom, licence, nationalité, classe ou n° certificat…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select className="sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Tabs */}
@@ -163,7 +300,7 @@ function Pilots() {
                 onClick={() => { setFilter(f.key); setShowArchived(false); }}
               >
                 {f.label}
-                <span className="tab-count">{counts[f.key]}</span>
+                <span className="tab-count">{counts[f.key] ?? 0}</span>
               </button>
             ))}
             <button
@@ -177,7 +314,12 @@ function Pilots() {
 
           {/* Table */}
           <div className="card">
-            {visible.length === 0 ? (
+            {loading ? (
+              <div className="empty-state">
+                <Users size={36} strokeWidth={1.5} />
+                <p>Chargement des pilotes…</p>
+              </div>
+            ) : pilots.length === 0 ? (
               <div className="empty-state">
                 <Users size={36} strokeWidth={1.5} />
                 <p>Aucun pilote trouvé.</p>
@@ -193,7 +335,7 @@ function Pilots() {
                   <span>Actions</span>
                 </div>
 
-                {visible.map((p) => {
+                {pilots.map((p) => {
                   const days   = daysUntilExpiry(p.expiryDate);
                   const status = computeStatus(p.expiryDate);
                   const cfg    = STATUS_CONFIG[status] || STATUS_CONFIG.unknown;
@@ -229,44 +371,34 @@ function Pilots() {
                         <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
                       </div>
                       <div className="action-btns">
+                        <button className="action-btn" title="Voir les détails" onClick={() => setViewTarget(p)}>
+                          <Eye size={14} />
+                        </button>
+                        <button className="action-btn" title="Modifier" onClick={() => openEditModal(p)}>
+                          <Pencil size={14} />
+                        </button>
                         {!p.archived ? (
                           <>
                             <button
                               className="action-btn"
-                              title="Ouvrir certificat"
-                              onClick={() => navigate("/pdf1")}
+                              title="Générer un certificat"
+                              onClick={() => navigate("/pdf1", { state: { pilot: p } })}
                             >
                               <FileText size={14} />
                             </button>
-                            <button
-                              className="action-btn"
-                              title="Renouveler"
-                              onClick={() => openRenew(p)}
-                            >
+                            <button className="action-btn" title="Renouveler" onClick={() => openRenew(p)}>
                               <RefreshCw size={14} />
                             </button>
-                            <button
-                              className="action-btn"
-                              title="Archiver"
-                              onClick={() => handleArchive(p.id)}
-                            >
+                            <button className="action-btn" title="Archiver" onClick={() => handleArchive(p.id)}>
                               <Archive size={14} />
                             </button>
                           </>
                         ) : (
-                          <button
-                            className="action-btn"
-                            title="Restaurer"
-                            onClick={() => handleRestore(p.id)}
-                          >
+                          <button className="action-btn" title="Restaurer" onClick={() => handleRestore(p.id)}>
                             <RotateCcw size={14} />
                           </button>
                         )}
-                        <button
-                          className="action-btn danger"
-                          title="Supprimer"
-                          onClick={() => handleDelete(p.id)}
-                        >
+                        <button className="action-btn danger" title="Supprimer" onClick={() => setDeleteTarget(p)}>
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -275,11 +407,35 @@ function Pilots() {
                 })}
               </div>
             )}
+
+            {!loading && pilots.length > 0 && (
+              <div className="pagination">
+                <span className="pagination-info">
+                  Page {pagination.page} / {pagination.pages} · {pagination.total} pilote(s)
+                </span>
+                <div className="pagination-btns">
+                  <button
+                    className="action-btn"
+                    disabled={pagination.page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    className="action-btn"
+                    disabled={pagination.page >= pagination.pages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* Modal */}
+      {/* Modal Ajouter / Modifier */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -296,18 +452,12 @@ function Pilots() {
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <h3 className="modal-title">Ajouter un pilote</h3>
+              <h3 className="modal-title">{editingPilot ? "Modifier le pilote" : "Ajouter un pilote"}</h3>
 
               {formError && <p className="error-inline">{formError}</p>}
 
               <div className="modal-form">
-                {[
-                  { name: "name",          label: "Nom complet *",        type: "text",  placeholder: "Jean Dupont"        },
-                  { name: "email",         label: "Email",                type: "email", placeholder: "pilote@example.com" },
-                  { name: "licenseNumber", label: "N° Licence",           type: "text",  placeholder: "FR-ATPL-001"        },
-                  { name: "nationality",   label: "Nationalité",          type: "text",  placeholder: "Française"          },
-                  { name: "expiryDate",    label: "Date d'expiration *",  type: "date",  placeholder: ""                   },
-                ].map((f) => (
+                {FORM_FIELDS.map((f) => (
                   <div className="form-field" key={f.name}>
                     <label>{f.label}</label>
                     <input
@@ -349,14 +499,11 @@ function Pilots() {
               </div>
 
               <div className="modal-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => { setShowModal(false); setForm(EMPTY_FORM); setFormError(""); }}
-                >
+                <button className="btn btn-secondary" onClick={closeFormModal}>
                   Annuler
                 </button>
-                <button className="btn btn-primary" onClick={handleAdd}>
-                  Ajouter le pilote
+                <button className="btn btn-primary" onClick={handleSubmitForm}>
+                  {editingPilot ? "Enregistrer les modifications" : "Ajouter le pilote"}
                 </button>
               </div>
             </motion.div>
@@ -364,7 +511,7 @@ function Pilots() {
         )}
       </AnimatePresence>
 
-      {/* Renew modal */}
+      {/* Modal Renouveler */}
       <AnimatePresence>
         {renewTarget && (
           <motion.div
@@ -412,6 +559,145 @@ function Pilots() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal Détails du pilote */}
+      <AnimatePresence>
+        {viewTarget && (
+          <motion.div
+            className="modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={closeView}
+          >
+            <motion.div
+              className="modal modal-lg"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="modal-title">Détails du pilote</h3>
+
+              <div className="detail-section">
+                <div className="detail-section-title">Informations générales</div>
+                <div className="detail-grid">
+                  <div className="detail-row">
+                    <span className="detail-label">Nom complet</span>
+                    <span className="detail-value">{viewTarget.name}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Email</span>
+                    <span className="detail-value">{viewTarget.email || "—"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Nationalité</span>
+                    <span className="detail-value">{viewTarget.nationality || "—"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Licence</span>
+                    <span className="detail-value">{viewTarget.licenseNumber || "—"} ({viewTarget.licenseType})</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Classe médicale</span>
+                    <span className="detail-value">Classe {viewTarget.medicalClass}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">N° Certificat</span>
+                    <span className="detail-value">{viewTarget.certificateNumber || "—"}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Date d'expiration</span>
+                    <span className="detail-value">
+                      {viewTarget.expiryDate ? new Date(viewTarget.expiryDate).toLocaleDateString("fr-FR") : "—"}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Statut</span>
+                    <span className="detail-value">
+                      {(() => {
+                        const s = STATUS_CONFIG[computeStatus(viewTarget.expiryDate)] || STATUS_CONFIG.unknown;
+                        return <span className={`badge ${s.cls}`}>{s.label}</span>;
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="detail-section-title">Certificats médicaux ({viewCertificates.length})</div>
+                {viewLoading ? (
+                  <p className="pilot-sub">Chargement…</p>
+                ) : viewCertificates.length === 0 ? (
+                  <p className="pilot-sub">Aucun certificat enregistré pour ce pilote.</p>
+                ) : (
+                  <div className="mini-table">
+                    <div className="mini-table-row mini-table-head">
+                      <span>N° Certificat</span>
+                      <span>Classe</span>
+                      <span>Émis le</span>
+                      <span>Expire le</span>
+                    </div>
+                    {viewCertificates.map((c) => (
+                      <div className="mini-table-row" key={c.id}>
+                        <span>{c.certificateNumber}</span>
+                        <span>Classe {c.medicalClass}</span>
+                        <span>{new Date(c.issueDate).toLocaleDateString("fr-FR")}</span>
+                        <span>{new Date(c.expiryDate).toLocaleDateString("fr-FR")}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <div className="detail-section-title">Historique récent</div>
+                {viewLoading ? (
+                  <p className="pilot-sub">Chargement…</p>
+                ) : viewHistory.length === 0 ? (
+                  <p className="pilot-sub">Aucune activité enregistrée.</p>
+                ) : (
+                  <div className="activity-feed">
+                    {viewHistory.map((h) => {
+                      const cfg = ACTION_CONFIG[h.action] || { label: h.action, cls: "badge-unknown", icon: Clock };
+                      const Icon = cfg.icon;
+                      return (
+                        <div className="activity-item" key={h.id}>
+                          <div className="activity-icon"><Icon size={16} /></div>
+                          <div className="activity-body">
+                            <p className="activity-title">{cfg.label}</p>
+                            <p className="activity-sub">{formatDate(h.createdAt)} · {h.performedBy?.username || "Système"}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: 24 }}>
+                <button className="btn btn-secondary" onClick={closeView}>Fermer</button>
+                <button className="btn btn-primary" onClick={() => { closeView(); openEditModal(viewTarget); }}>
+                  Modifier ce pilote
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmation de suppression */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Supprimer ce pilote ?"
+        message={`Cette action est irréversible. Le pilote "${deleteTarget?.name}" et son dossier seront définitivement supprimés.`}
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

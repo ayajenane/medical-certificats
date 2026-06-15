@@ -21,6 +21,7 @@ const pilotHistorySchema = new mongoose.Schema(
         'PILOT_RENEWED',
         'PILOT_EXPIRED',
         'PILOT_DELETED',
+        'CERTIFICATE_GENERATED',
       ],
       required: true,
     },

@@ -4,7 +4,9 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Pilots from "./pages/Pilots";
 import History from "./pages/History";
+import Certificates from "./pages/Certificates";
 import Pdf1 from "./components/Pdf1";
+import { ToastProvider } from "./context/ToastContext";
 
 function isAuthenticated() {
   return !!sessionStorage.getItem("currentUser");
@@ -35,18 +37,21 @@ function SuperAdminRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/register" element={<SuperAdminRoute><Register /></SuperAdminRoute>} />
-        <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/pilots"    element={<ProtectedRoute><Pilots /></ProtectedRoute>} />
-        <Route path="/history"   element={<ProtectedRoute><History /></ProtectedRoute>} />
-        <Route path="/pdf1"      element={<ProtectedRoute><Pdf1 /></ProtectedRoute>} />
-        <Route path="*"          element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/register" element={<SuperAdminRoute><Register /></SuperAdminRoute>} />
+          <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/pilots"    element={<ProtectedRoute><Pilots /></ProtectedRoute>} />
+          <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
+          <Route path="/history"   element={<ProtectedRoute><History /></ProtectedRoute>} />
+          <Route path="/pdf1"      element={<ProtectedRoute><Pdf1 /></ProtectedRoute>} />
+          <Route path="*"          element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

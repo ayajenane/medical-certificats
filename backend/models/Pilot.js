@@ -18,6 +18,11 @@ const pilotSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    certificateNumber: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     licenseType: {
       type: String,
       enum: ['ATPL', 'CPL', 'PPL', 'ATCO', 'Autre'],

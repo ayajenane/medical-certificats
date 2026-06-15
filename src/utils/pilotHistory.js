@@ -1,8 +1,8 @@
 import api from "./api";
 
-export async function getPilotHistory({ page = 1, limit = 10, sort = "desc", action = "all", search = "" } = {}) {
+export async function getPilotHistory({ page = 1, limit = 10, sort = "desc", action = "all", search = "", pilotId } = {}) {
   const { data } = await api.get("/pilot-history", {
-    params: { page, limit, sort, action, search },
+    params: { page, limit, sort, action, search, pilotId },
   });
   return data;
 }

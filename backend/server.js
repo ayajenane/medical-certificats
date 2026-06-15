@@ -5,6 +5,8 @@ import connectDB from './db.js';
 import authRoutes from './authRoutes.js';
 import pilotRoutes from './routes/pilotRoutes.js';
 import pilotHistoryRoutes from './routes/pilotHistoryRoutes.js';
+import certificateRoutes from './routes/certificateRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/pilots', pilotRoutes);
 app.use('/api/pilot-history', pilotHistoryRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

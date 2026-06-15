@@ -786,7 +786,7 @@
 .data-table-head,
 .data-table-row {
   display: grid;
-  grid-template-columns: 2fr 1.6fr 0.8fr 1.2fr 1fr 0.9fr;
+  grid-template-columns: 1.8fr 1.3fr 0.7fr 1.1fr 0.9fr 1.6fr;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
@@ -1471,4 +1471,213 @@
   .stat-card { padding: 16px; }
   .navbar { padding: 0 16px; }
   .navbar-username, .navbar-role { display: none; }
+}
+
+/* ================================================================
+   TOASTS
+   ================================================================ */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  box-shadow: var(--shadow-lg);
+  font-size: 13.5px;
+  color: var(--navy);
+}
+
+.toast-success { border-left-color: var(--green); }
+.toast-success .toast-icon { color: var(--green); }
+
+.toast-error { border-left-color: var(--red); }
+.toast-error .toast-icon { color: var(--red); }
+
+.toast-icon { flex-shrink: 0; margin-top: 1px; }
+.toast-message { flex: 1; line-height: 1.5; }
+
+.toast-close {
+  flex-shrink: 0;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s;
+}
+
+.toast-close:hover { color: var(--text); }
+
+/* ================================================================
+   CONFIRM DIALOG
+   ================================================================ */
+.confirm-dialog { max-width: 420px; text-align: center; }
+
+.confirm-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--orange-bg);
+  color: var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.confirm-icon.danger { background: var(--red-bg); color: var(--red); }
+
+.confirm-dialog .modal-title { text-align: center; }
+
+.confirm-message {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.confirm-dialog .modal-actions { justify-content: center; }
+
+/* ================================================================
+   TOOLBAR (search + filters + sort)
+   ================================================================ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar .search-bar { flex: 1; min-width: 220px; }
+
+.sort-select {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.sort-select:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+}
+
+/* ================================================================
+   STAT CARDS — wider grid for 5 cards
+   ================================================================ */
+.stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+/* ================================================================
+   RECENT ACTIVITY FEED (dashboard)
+   ================================================================ */
+.activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+.activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r);
+  background: var(--blue-50);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activity-body { flex: 1; min-width: 0; }
+
+.activity-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.activity-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.activity-time {
+  font-size: 11.5px;
+  color: var(--text-light);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   PILOT DETAIL MODAL
+   ================================================================ */
+.modal-lg { max-width: 680px; }
+
+.detail-section {
+  margin-top: 24px;
+}
+
+.detail-section:first-of-type { margin-top: 0; }
+
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.mini-table { display: flex; flex-direction: column; }
+
+.mini-table-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.mini-table-row:last-child { border-bottom: none; }
+
+.mini-table-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-muted);
 }

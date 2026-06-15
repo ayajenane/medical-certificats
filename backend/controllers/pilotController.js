@@ -6,8 +6,13 @@ const handleError = (res, error) => {
 
 export const getPilots = async (req, res) => {
   try {
-    const pilots = await pilotService.listPilots();
-    res.status(200).json({ success: true, data: pilots });
+    const result = await pilotService.listPilots(req.query);
+    res.status(200).json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      counts: result.counts,
+    });
   } catch (error) {
     handleError(res, error);
   }
@@ -24,10 +29,6 @@ export const getPilot = async (req, res) => {
 
 export const createPilot = async (req, res) => {
   try {
-    const { name, expiryDate } = req.body;
-    if (!name || !expiryDate) {
-      return res.status(400).json({ message: "Le nom et la date d'expiration sont requis" });
-    }
     const pilot = await pilotService.createPilot(req.body, req.user);
     res.status(201).json({ success: true, data: pilot });
   } catch (error) {

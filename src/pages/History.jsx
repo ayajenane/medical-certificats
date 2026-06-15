@@ -4,77 +4,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Search, ChevronLeft, ChevronRight, ArrowUpDown, Eye } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import { getPilotHistory } from "../utils/pilotHistory";
-
-const ACTION_CONFIG = {
-  PILOT_CREATED:  { label: "Pilote créé",          cls: "badge-active"   },
-  PILOT_UPDATED:  { label: "Pilote modifié",       cls: "badge-info"     },
-  PILOT_ARCHIVED: { label: "Pilote archivé",       cls: "badge-expiring" },
-  PILOT_RESTORED: { label: "Pilote restauré",      cls: "badge-active"   },
-  PILOT_RENEWED:  { label: "Certificat renouvelé", cls: "badge-renewed"  },
-  PILOT_EXPIRED:  { label: "Certificat expiré",    cls: "badge-expired"  },
-  PILOT_DELETED:  { label: "Pilote supprimé",      cls: "badge-expired"  },
-};
+import { ACTION_CONFIG, formatDate, formatValue, getFieldChanges } from "../utils/historyDisplay";
 
 const FILTERS = [
-  { key: "all",            label: "Toutes les actions" },
-  { key: "PILOT_CREATED",  label: "Créations"          },
-  { key: "PILOT_UPDATED",  label: "Modifications"      },
-  { key: "PILOT_RENEWED",  label: "Renouvellements"    },
-  { key: "PILOT_ARCHIVED", label: "Archivages"         },
-  { key: "PILOT_RESTORED", label: "Restaurations"      },
-  { key: "PILOT_EXPIRED",  label: "Expirations"        },
-  { key: "PILOT_DELETED",  label: "Suppressions"       },
+  { key: "all",                  label: "Toutes les actions" },
+  { key: "PILOT_CREATED",        label: "Créations"          },
+  { key: "PILOT_UPDATED",        label: "Modifications"      },
+  { key: "PILOT_RENEWED",        label: "Renouvellements"    },
+  { key: "CERTIFICATE_GENERATED",label: "Certificats générés" },
+  { key: "PILOT_ARCHIVED",       label: "Archivages"         },
+  { key: "PILOT_RESTORED",       label: "Restaurations"      },
+  { key: "PILOT_EXPIRED",        label: "Expirations"        },
+  { key: "PILOT_DELETED",        label: "Suppressions"       },
 ];
-
-const FIELD_LABELS = {
-  name: "Nom",
-  email: "Email",
-  licenseNumber: "N° Licence",
-  licenseType: "Type de licence",
-  nationality: "Nationalité",
-  medicalClass: "Classe médicale",
-  expiryDate: "Date d'expiration",
-  archived: "Archivé",
-  lastKnownStatus: "Statut",
-  status: "Statut",
-};
-
-const DATE_FIELDS = new Set(["expiryDate", "createdAt", "updatedAt"]);
-
-function formatDate(iso) {
-  return new Date(iso).toLocaleString("fr-FR", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function formatValue(field, value) {
-  if (value === undefined || value === null || value === "") return "—";
-  if (DATE_FIELDS.has(field)) return new Date(value).toLocaleDateString("fr-FR");
-  if (typeof value === "boolean") return value ? "Oui" : "Non";
-  return String(value);
-}
-
-/** Calcule la liste des champs à afficher dans le détail d'une action. */
-function getFieldChanges(oldData, newData) {
-  const source = newData || oldData || {};
-  const fields = Object.keys(source).filter((f) => FIELD_LABELS[f]);
-
-  if (oldData && newData) {
-    return fields
-      .map((field) => ({
-        field, label: FIELD_LABELS[field],
-        oldValue: oldData[field], newValue: newData[field],
-      }))
-      .filter(({ oldValue, newValue }) => String(oldValue) !== String(newValue));
-  }
-
-  return fields.map((field) => ({
-    field, label: FIELD_LABELS[field],
-    oldValue: oldData ? oldData[field] : undefined,
-    newValue: newData ? newData[field] : undefined,
-  }));
-}
 
 function History() {
   const navigate = useNavigate();

@@ -14,9 +14,22 @@ export function daysUntilExpiry(expiryDateStr) {
   return Math.ceil((new Date(expiryDateStr) - new Date()) / 86400000);
 }
 
-export async function getPilots() {
-  const { data } = await api.get("/pilots");
-  return data.data;
+/**
+ * @param {object} [params]
+ * @param {string} [params.search]
+ * @param {string} [params.status] - all | active | expiring | expired
+ * @param {boolean} [params.archived]
+ * @param {string} [params.medicalClass]
+ * @param {string} [params.sort] - name | -name | expiryDate | -expiryDate | createdAt | -createdAt
+ * @param {number} [params.page]
+ * @param {number} [params.limit]
+ * @returns {Promise<{data: object[], pagination: object, counts: object}>}
+ */
+export async function getPilots(params = {}) {
+  const { data } = await api.get("/pilots", {
+    params: { ...params, archived: params.archived ? "true" : "false" },
+  });
+  return data;
 }
 
 export async function addPilot(pilotData) {
@@ -26,6 +39,11 @@ export async function addPilot(pilotData) {
 
 export async function updatePilot(id, updates) {
   const { data } = await api.put(`/pilots/${id}`, updates);
+  return data.data;
+}
+
+export async function getPilot(id) {
+  const { data } = await api.get(`/pilots/${id}`);
   return data.data;
 }
 
