@@ -6,6 +6,7 @@ import Pilots from "./pages/Pilots";
 import History from "./pages/History";
 import Certificates from "./pages/Certificates";
 import Pdf1 from "./components/Pdf1";
+import Pdf2 from "./components/Pdf2";
 import { ToastProvider } from "./context/ToastContext";
 
 function isAuthenticated() {
@@ -48,6 +49,7 @@ function App() {
           <Route path="/certificates" element={<ProtectedRoute><Certificates /></ProtectedRoute>} />
           <Route path="/history"   element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/pdf1"      element={<ProtectedRoute><Pdf1 /></ProtectedRoute>} />
+          <Route path="/pdf2"      element={<ProtectedRoute><Pdf2 /></ProtectedRoute>} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

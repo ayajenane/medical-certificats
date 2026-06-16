@@ -1,0 +1,224 @@
+#certificate-wrapper-2 {
+    color-scheme: light;
+    padding: 16px 20px;
+    background: #cfeceb;
+    min-width: fit-content;
+    text-align: left;
+}
+
+#certificate-wrapper-2 .pdf2-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+#certificate-wrapper-2 .pdf2-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid #41b8f0;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #0f3d55;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .12s;
+}
+
+#certificate-wrapper-2 .pdf2-back-btn:hover {
+    background: #e6f7ff;
+}
+
+#certificate-wrapper-2 .pdf2-pilot-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#certificate-wrapper-2 .pdf2-pilot-select label {
+    border-bottom: none;
+    padding-bottom: 0;
+    width: auto;
+    font-size: 13px;
+}
+
+#certificate-wrapper-2 .pdf2-pilot-select select {
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+    color: #000;
+    font-size: 13px;
+    min-width: 240px;
+}
+
+/* ── Layout des 4 colonnes ──────────────────────────────── */
+#certificate-wrapper-2 .pdf2-forms {
+    display: flex;
+    gap: 20px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: stretch;
+}
+
+#certificate-wrapper-2 .pdf2-form {
+    width: 250px;
+    padding: 12px;
+    border: 4px double #41b8f0;
+    border-radius: 5px;
+    background: #00999330;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ── Titre de colonne ───────────────────────────────────── */
+#certificate-wrapper-2 .pdf2-cert-title {
+    font-weight: 700;
+    font-size: 12px;
+    color: #0f3d55;
+    border-bottom: 2px solid #41b8f0;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+/* ── Labels et champs ───────────────────────────────────── */
+#certificate-wrapper-2 label {
+    display: block;
+    border-bottom: 2px solid #000000;
+    padding-bottom: 3px;
+    font-weight: bold;
+    width: 100%;
+    color: #0f3d55;
+    background: transparent;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+#certificate-wrapper-2 input[type="text"],
+#certificate-wrapper-2 input[type="date"] {
+    width: 90%;
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    color: #000;
+    color-scheme: light;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+/* ── Zone signature / cachet (affichée, non interactive) ─ */
+#certificate-wrapper-2 .pdf2-signature-box {
+    flex: 1;
+    min-height: 60px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+
+#certificate-wrapper-2 .pdf2-stamp-box {
+    flex: 1;
+    min-height: 80px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+}
+
+/* ── Tableau validité ───────────────────────────────────── */
+#certificate-wrapper-2 .pdf2-validity-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+#certificate-wrapper-2 .pdf2-validity-table td {
+    padding: 5px 4px;
+    border: 1px solid #41b8f0;
+    color: #0f3d55;
+    vertical-align: middle;
+}
+
+#certificate-wrapper-2 .pdf2-validity-table td:first-child {
+    line-height: 1.35;
+}
+
+#certificate-wrapper-2 .pdf2-validity-table td:last-child {
+    width: 105px;
+    text-align: center;
+}
+
+#certificate-wrapper-2 .pdf2-validity-table input[type="date"] {
+    width: 100%;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+/* ── Tableau limitations ────────────────────────────────── */
+#certificate-wrapper-2 .pdf2-lim-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+#certificate-wrapper-2 .pdf2-lim-table th {
+    padding: 4px;
+    border: 1px solid #41b8f0;
+    background: #00999320;
+    color: #0f3d55;
+    font-weight: 700;
+    font-size: 11px;
+    text-align: left;
+}
+
+#certificate-wrapper-2 .pdf2-lim-table td {
+    padding: 2px 4px;
+    border: 1px solid #41b8f0;
+}
+
+#certificate-wrapper-2 .pdf2-lim-table td:first-child { width: 45px; }
+
+#certificate-wrapper-2 .pdf2-lim-table input[type="text"] {
+    width: 100%;
+    padding: 3px 4px;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    box-sizing: border-box;
+}
+
+/* ── Bouton Générer ─────────────────────────────────────── */
+#certificate-wrapper-2 > button {
+    display: block;
+    margin: 14px auto 0;
+    padding: 10px 28px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#certificate-wrapper-2 > button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 1150px) {
+    #certificate-wrapper-2 .pdf2-forms {
+        flex-wrap: wrap;
+    }
+    #certificate-wrapper-2 .pdf2-form {
+        width: 100%;
+    }
+}

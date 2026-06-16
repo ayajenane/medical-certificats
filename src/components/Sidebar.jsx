@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 
 const CERT_ITEMS = [
   { key: "pdf1", label: "Classe 1 — Commercial", icon: FileText, path: "/pdf1", available: true  },
-  { key: "pdf2", label: "Classe 2 — Privé",      icon: FileText, path: null,    available: false },
+  { key: "pdf2", label: "Classe 2 — Privé",      icon: FileText, path: "/pdf2", available: true  },
   { key: "pdf3", label: "Classe 3 — Contrôleur", icon: FileText, path: null,    available: false },
 ];
 

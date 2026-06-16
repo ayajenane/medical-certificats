@@ -25,7 +25,7 @@ const CERT_FORMS = [
     id: "pdf2",
     title: "Certificat Médical — Classe 2",
     description: "Pilotes privés (PPL). Renouvellement annuel requis.",
-    route: null,
+    route: "/pdf2",
   },
   {
     id: "pdf3",
