@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -8,7 +9,10 @@ import {
   Shield,
   ChevronRight,
   UserPlus,
+  Settings,
+  KeyRound,
 } from "lucide-react";
+import ChangePasswordModal from "./ChangePasswordModal";
 
 const NAV_ITEMS = [
   { key: "dashboard",    label: "Tableau de bord",     icon: LayoutDashboard, path: "/dashboard"    },
@@ -30,6 +34,7 @@ const ROLE_LABELS = {
 
 function Sidebar({ activePage }) {
   const navigate = useNavigate();
+  const [showChangePw, setShowChangePw] = useState(false);
   const user = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
   const isSuperAdmin = user.role === "superadmin";
 
@@ -87,6 +92,22 @@ function Sidebar({ activePage }) {
               <span>Créer un admin</span>
               {activePage === "create-admin" && <ChevronRight size={13} className="sidebar-item-arrow" />}
             </button>
+            <button
+              className={`sidebar-item${activePage === "admin-management" ? " active" : ""}`}
+              onClick={() => navigate("/admin-management")}
+            >
+              <Settings size={17} />
+              <span>Gestion des admins</span>
+              {activePage === "admin-management" && <ChevronRight size={13} className="sidebar-item-arrow" />}
+            </button>
+            <button
+              className={`sidebar-item${activePage === "admin-history" ? " active" : ""}`}
+              onClick={() => navigate("/admin-history")}
+            >
+              <History size={17} />
+              <span>Historique admins</span>
+              {activePage === "admin-history" && <ChevronRight size={13} className="sidebar-item-arrow" />}
+            </button>
           </>
         )}
 
@@ -116,10 +137,20 @@ function Sidebar({ activePage }) {
             <span className="sidebar-user-role">{ROLE_LABELS[user.role] || "Inspecteur médical"}</span>
           </div>
         </div>
+        <button
+          className="sidebar-logout"
+          onClick={() => setShowChangePw(true)}
+          title="Changer mon mot de passe"
+          style={{ marginRight: 4 }}
+        >
+          <KeyRound size={17} />
+        </button>
         <button className="sidebar-logout" onClick={logout} title="Déconnexion">
           <LogOut size={17} />
         </button>
       </div>
+
+      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
     </aside>
   );
 }

@@ -7,6 +7,7 @@ import pilotRoutes from './routes/pilotRoutes.js';
 import pilotHistoryRoutes from './routes/pilotHistoryRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import adminHistoryRoutes from './routes/adminHistoryRoutes.js';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/pilots', pilotRoutes);
 app.use('/api/pilot-history', pilotHistoryRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin-history', adminHistoryRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

@@ -1,8 +1,43 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { UserPlus, CheckCircle } from "lucide-react";
+import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react";
 import api from "../utils/api";
 import Sidebar from "../components/Sidebar";
+
+function PasswordField({ id, name, label, placeholder, value, onChange, disabled, error }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="form-field">
+      <label htmlFor={id}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <input
+          id={id}
+          name={name}
+          type={show ? "text" : "password"}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={error ? "input-error" : ""}
+          style={{ paddingRight: 40 }}
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          style={{
+            position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--text-muted)", padding: 0, display: "flex",
+          }}
+          tabIndex={-1}
+        >
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
 
 function Register() {
   const [form, setForm] = useState({
@@ -127,37 +162,27 @@ function Register() {
                   {errors.email && <span className="field-error">{errors.email}</span>}
                 </div>
 
-                <div className="form-field">
-                  <label htmlFor="password">Mot de passe</label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={handleChange}
-                    disabled={loading}
-                    className={errors.password ? "input-error" : ""}
-                  />
-                  {errors.password && <span className="field-error">{errors.password}</span>}
-                </div>
+                <PasswordField
+                  id="password"
+                  name="password"
+                  label="Mot de passe"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  disabled={loading}
+                  error={errors.password}
+                />
 
-                <div className="form-field">
-                  <label htmlFor="confirmPassword">Confirmer le mot de passe</label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    value={form.confirmPassword}
-                    onChange={handleChange}
-                    disabled={loading}
-                    className={errors.confirmPassword ? "input-error" : ""}
-                  />
-                  {errors.confirmPassword && (
-                    <span className="field-error">{errors.confirmPassword}</span>
-                  )}
-                </div>
+                <PasswordField
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  label="Confirmer le mot de passe"
+                  placeholder="••••••••"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  disabled={loading}
+                  error={errors.confirmPassword}
+                />
 
                 <div className="modal-actions" style={{ marginTop: 8 }}>
                   <button

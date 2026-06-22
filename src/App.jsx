@@ -5,6 +5,8 @@ import Dashboard from "./pages/Dashboard";
 import Pilots from "./pages/Pilots";
 import History from "./pages/History";
 import Certificates from "./pages/Certificates";
+import AdminManagement from "./pages/AdminManagement";
+import AdminHistory from "./pages/AdminHistory";
 import Pdf1 from "./components/Pdf1";
 import Pdf2 from "./components/Pdf2";
 import { ToastProvider } from "./context/ToastContext";
@@ -43,6 +45,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/register" element={<SuperAdminRoute><Register /></SuperAdminRoute>} />
+          <Route path="/admin-management" element={<SuperAdminRoute><AdminManagement /></SuperAdminRoute>} />
+          <Route path="/admin-history" element={<SuperAdminRoute><AdminHistory /></SuperAdminRoute>} />
           <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/pilots"    element={<ProtectedRoute><Pilots /></ProtectedRoute>} />
