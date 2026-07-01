@@ -16,7 +16,6 @@ export const FIELD_LABELS = {
   email: "Email",
   licenseNumber: "N° Licence",
   certificateNumber: "N° Certificat",
-  licenseType: "Type de licence",
   nationality: "Nationalité",
   medicalClass: "Classe médicale",
   expiryDate: "Date d'expiration",

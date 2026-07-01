@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Search, ChevronLeft, ChevronRight, ArrowUpDown, Eye } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 import { getPilotHistory } from "../utils/pilotHistory";
 import { ACTION_CONFIG, formatDate, formatValue, getFieldChanges } from "../utils/historyDisplay";
 
@@ -79,6 +81,9 @@ function History() {
           <div className="navbar-left">
             <span className="navbar-eyebrow">Administration</span>
             <h1 className="navbar-title">Historique des pilotes</h1>
+          </div>
+          <div className="navbar-right">
+            <ThemeToggle />
           </div>
         </header>
 
@@ -188,6 +193,7 @@ function History() {
             )}
           </div>
         </main>
+        <Footer />
       </div>
 
       {/* Detail modal */}

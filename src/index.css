@@ -53,6 +53,72 @@
   --navbar-h:   64px;
 }
 
+/* ================================================================
+   DARK MODE
+   ================================================================ */
+[data-theme="dark"] {
+  --bg:          #0F172A;
+  --surface:     #1E293B;
+  --surface-2:   #162032;
+  --white:       #1E293B;
+  --border:      #334155;
+  --border-strong:#475569;
+  --text:        #F1F5F9;
+  --text-muted:  #94A3B8;
+  --text-light:  #64748B;
+  --blue-50:     rgba(30,64,175,.15);
+  --blue-100:    rgba(30,64,175,.25);
+  --green-bg:    rgba(20,83,45,.25);
+  --green-text:  #86EFAC;
+  --orange-bg:   rgba(120,53,15,.25);
+  --orange-text: #FCD34D;
+  --red-bg:      rgba(127,29,29,.25);
+  --red-text:    #FCA5A5;
+  --shadow-xs:   0 1px 2px rgba(0,0,0,.3);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  --shadow:      0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -1px rgba(0,0,0,.3);
+  --shadow-md:   0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -2px rgba(0,0,0,.3);
+}
+
+/* ================================================================
+   DARK MODE — text color fixes (elements that use --navy directly)
+   ================================================================ */
+[data-theme="dark"] .navbar-title,
+[data-theme="dark"] .page-header-left h2,
+[data-theme="dark"] .stat-value,
+[data-theme="dark"] .card-header h3,
+[data-theme="dark"] .navbar-username,
+[data-theme="dark"] .pilot-name,
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .detail-value,
+[data-theme="dark"] .cert-title,
+[data-theme="dark"] .auth-form-title,
+[data-theme="dark"] .activity-title,
+[data-theme="dark"] .detail-section-title,
+[data-theme="dark"] .app-footer-brand,
+[data-theme="dark"] .toast,
+[data-theme="dark"] .form-field label,
+[data-theme="dark"] .auth-form-field label,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .sidebar-mobile-toggle,
+[data-theme="dark"] .mini-table-head {
+  color: var(--text);
+}
+
+[data-theme="dark"] .search-input:focus,
+[data-theme="dark"] .search-bar-input:focus,
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .sort-select:focus {
+  background: var(--surface);
+}
+
+[data-theme="dark"] .data-table-row:hover,
+[data-theme="dark"] .history-table-row:hover,
+[data-theme="dark"] .cert-card:hover {
+  background: rgba(59,130,246,.08);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 
@@ -64,6 +130,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 1.5;
+  transition: background .25s ease, color .25s ease;
 }
 
 button, input, textarea, select { font: inherit; }

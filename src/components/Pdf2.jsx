@@ -78,6 +78,8 @@ function Pdf2() {
     getPilots({ archived: false, sort: "name", limit: 1000 })
       .then((res) => {
         setPilots(res.data);
+        // Ne pas écraser les données si on vient d'un certificat existant
+        if (location.state?.certificate) return;
         if (!location.state?.pilot && res.data.length > 0 && !selectedPilotId) {
           const first = res.data[0];
           setSelectedPilotId(first.id);
@@ -89,6 +91,12 @@ function Pdf2() {
   }, []);
 
   useEffect(() => {
+    const cert = location.state?.certificate;
+    if (cert) {
+      if (cert.pilotId) setSelectedPilotId(cert.pilotId);
+      if (cert.formData) setFormData((prev) => ({ ...prev, ...cert.formData }));
+      return;
+    }
     const pilot = location.state?.pilot;
     if (!pilot) return;
     setSelectedPilotId(pilot.id);
@@ -194,22 +202,6 @@ function Pdf2() {
           <ArrowLeft size={16} />
           Retour aux pilotes
         </button>
-        <div className="pdf2-pilot-select">
-          <label htmlFor="pilot-select-2">Pilote associé * :</label>
-          <select
-            id="pilot-select-2"
-            value={selectedPilotId}
-            onChange={handleSelectPilot}
-            style={!selectedPilotId ? { borderColor: "var(--red)" } : undefined}
-          >
-            <option value="">— Sélectionner un pilote —</option>
-            {pilots.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.licenseNumber ? `(${p.licenseNumber})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {saveError && (

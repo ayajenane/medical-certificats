@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -6,11 +6,11 @@ import {
   History,
   FileText,
   LogOut,
-  Shield,
   ChevronRight,
-  UserPlus,
   Settings,
   KeyRound,
+  Menu,
+  X,
 } from "lucide-react";
 import ChangePasswordModal from "./ChangePasswordModal";
 
@@ -35,6 +35,7 @@ const ROLE_LABELS = {
 function Sidebar({ activePage }) {
   const navigate = useNavigate();
   const [showChangePw, setShowChangePw] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const user = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
   const isSuperAdmin = user.role === "superadmin";
 
@@ -45,6 +46,16 @@ function Sidebar({ activePage }) {
     .toUpperCase()
     .slice(0, 2) || "?";
 
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  const goTo = (path) => {
+    setMobileOpen(false);
+    navigate(path);
+  };
+
   const logout = () => {
     sessionStorage.removeItem("currentUser");
     localStorage.removeItem("token");
@@ -52,106 +63,129 @@ function Sidebar({ activePage }) {
   };
 
   return (
-    <aside className="sidebar">
-      {/* Brand */}
-      <div className="sidebar-brand">
-        <div className="sidebar-logo">
-          <Shield size={20} />
-        </div>
-        <div>
-          <span className="sidebar-brand-name">MedCert</span>
-          <span className="sidebar-brand-sub">Aviation · Maroc</span>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        <span className="sidebar-section">Navigation</span>
-        {NAV_ITEMS.map(({ key, label, icon: Icon, path }) => (
-          <button
-            key={key}
-            className={`sidebar-item${activePage === key ? " active" : ""}`}
-            onClick={() => navigate(path)}
-          >
-            <Icon size={17} />
-            <span>{label}</span>
-            {activePage === key && <ChevronRight size={13} className="sidebar-item-arrow" />}
-          </button>
-        ))}
-
-        {isSuperAdmin && (
-          <>
-            <span className="sidebar-section" style={{ marginTop: 8 }}>
-              Administration
-            </span>
-            <button
-              className={`sidebar-item${activePage === "create-admin" ? " active" : ""}`}
-              onClick={() => navigate("/register")}
-            >
-              <UserPlus size={17} />
-              <span>Créer un admin</span>
-              {activePage === "create-admin" && <ChevronRight size={13} className="sidebar-item-arrow" />}
-            </button>
-            <button
-              className={`sidebar-item${activePage === "admin-management" ? " active" : ""}`}
-              onClick={() => navigate("/admin-management")}
-            >
-              <Settings size={17} />
-              <span>Gestion des admins</span>
-              {activePage === "admin-management" && <ChevronRight size={13} className="sidebar-item-arrow" />}
-            </button>
-            <button
-              className={`sidebar-item${activePage === "admin-history" ? " active" : ""}`}
-              onClick={() => navigate("/admin-history")}
-            >
-              <History size={17} />
-              <span>Historique admins</span>
-              {activePage === "admin-history" && <ChevronRight size={13} className="sidebar-item-arrow" />}
-            </button>
-          </>
-        )}
-
-        <span className="sidebar-section" style={{ marginTop: 8 }}>
-          Certificats médicaux
-        </span>
-        {CERT_ITEMS.map(({ key, label, icon: Icon, path, available }) => (
-          <button
-            key={key}
-            className={`sidebar-item${activePage === key ? " active" : ""}${!available ? " disabled" : ""}`}
-            onClick={() => available && navigate(path)}
-            disabled={!available}
-          >
-            <Icon size={17} />
-            <span>{label}</span>
-            {!available && <span className="sidebar-soon">Bientôt</span>}
-          </button>
-        ))}
-      </nav>
-
-      {/* Footer: user + logout */}
-      <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <div className="sidebar-avatar">{initials}</div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{user.username || "AME"}</span>
-            <span className="sidebar-user-role">{ROLE_LABELS[user.role] || "Inspecteur médical"}</span>
-          </div>
-        </div>
+    <>
+      {!mobileOpen && (
         <button
-          className="sidebar-logout"
-          onClick={() => setShowChangePw(true)}
-          title="Changer mon mot de passe"
-          style={{ marginRight: 4 }}
+          className="sidebar-mobile-toggle"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Ouvrir le menu"
         >
-          <KeyRound size={17} />
+          <Menu size={20} />
         </button>
-        <button className="sidebar-logout" onClick={logout} title="Déconnexion">
-          <LogOut size={17} />
-        </button>
-      </div>
+      )}
 
-      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
-    </aside>
+      {mobileOpen && (
+        <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
+      )}
+
+      <aside className={`sidebar${mobileOpen ? " sidebar-open" : ""}`}>
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="sidebar-brand-name">Medical Certification</span>
+            <span className="sidebar-brand-sub">Aviation · Maroc</span>
+          </div>
+          <button
+            className="sidebar-close-btn"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Fermer le menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+          <span className="sidebar-section">Navigation</span>
+          {NAV_ITEMS.map(({ key, label, icon: Icon, path }) => (
+            <button
+              key={key}
+              className={`sidebar-item${activePage === key ? " active" : ""}`}
+              onClick={() => goTo(path)}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+              {activePage === key && <ChevronRight size={13} className="sidebar-item-arrow" />}
+            </button>
+          ))}
+
+          {isSuperAdmin && (
+            <>
+              <span className="sidebar-section" style={{ marginTop: 8 }}>
+                Administration
+              </span>
+              <button
+                className={`sidebar-item${activePage === "admin-management" ? " active" : ""}`}
+                onClick={() => goTo("/admin-management")}
+              >
+                <Settings size={17} />
+                <span>Gestion des admins</span>
+                {activePage === "admin-management" && <ChevronRight size={13} className="sidebar-item-arrow" />}
+              </button>
+              <button
+                className={`sidebar-item${activePage === "admin-history" ? " active" : ""}`}
+                onClick={() => goTo("/admin-history")}
+              >
+                <History size={17} />
+                <span>Historique admins</span>
+                {activePage === "admin-history" && <ChevronRight size={13} className="sidebar-item-arrow" />}
+              </button>
+            </>
+          )}
+
+          <span className="sidebar-section" style={{ marginTop: 8 }}>
+            Certificats médicaux
+          </span>
+          {CERT_ITEMS.map(({ key, label, icon: Icon, path, available }) => (
+            <button
+              key={key}
+              className={`sidebar-item${activePage === key ? " active" : ""}${!available ? " disabled" : ""}`}
+              onClick={() => available && goTo(path)}
+              disabled={!available}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+              {!available && <span className="sidebar-soon">Bientôt</span>}
+            </button>
+          ))}
+        </nav>
+
+        {/* Footer: user + logout */}
+        <div className="sidebar-footer">
+          <div
+            className="sidebar-user"
+            onClick={() => goTo("/profile")}
+            title="Mon profil"
+            style={{ cursor: "pointer" }}
+          >
+            <div className="sidebar-avatar" style={{ overflow: "hidden" }}>
+              {(() => {
+                const p = localStorage.getItem(`profile_photo_${user._id}`);
+                return p
+                  ? <img src={p} alt="profil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : initials;
+              })()}
+            </div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-name">{user.username || "AME"}</span>
+              <span className="sidebar-user-role">{ROLE_LABELS[user.role] || "Inspecteur médical"}</span>
+            </div>
+          </div>
+          <button
+            className="sidebar-logout"
+            onClick={() => setShowChangePw(true)}
+            title="Changer mon mot de passe"
+          >
+            <KeyRound size={17} />
+          </button>
+          <button className="sidebar-logout" onClick={logout} title="Déconnexion">
+            <LogOut size={17} />
+          </button>
+        </div>
+
+        {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+      </aside>
+    </>
   );
 }
 

@@ -2,8 +2,8 @@ import * as pilotHistoryService from '../services/pilotHistoryService.js';
 
 export const getHistory = async (req, res) => {
   try {
-    const { page, limit, sort, action, search, pilotId } = req.query;
-    const result = await pilotHistoryService.getHistory({ page, limit, sort, action, search, pilotId });
+    const { page, limit, sort, action, search, pilotId, performedById } = req.query;
+    const result = await pilotHistoryService.getHistory({ page, limit, sort, action, search, pilotId, performedById });
     res.status(200).json({ success: true, data: result.data, pagination: result.pagination });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -8,7 +8,6 @@ import pilotHistoryRoutes from './routes/pilotHistoryRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import adminHistoryRoutes from './routes/adminHistoryRoutes.js';
-
 const app = express();
 
 // Connecter à MongoDB

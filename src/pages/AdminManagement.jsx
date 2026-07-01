@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Pencil, Trash2, KeyRound, X, Eye, EyeOff } from "lucide-react";
+import { Users, Pencil, Trash2, KeyRound, X, Eye, EyeOff, UserPlus } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
 import api from "../utils/api";
@@ -64,6 +66,11 @@ function AdminManagement() {
   const [resetLoading, setResetLoading] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
+  const [createErrors, setCreateErrors] = useState({});
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => { fetchAdmins(); }, []);
 
@@ -140,6 +147,47 @@ function AdminManagement() {
     }
   };
 
+  const openCreate = () => {
+    setCreateForm({ username: "", email: "", password: "", confirmPassword: "" });
+    setCreateErrors({});
+    setShowCreate(true);
+  };
+
+  const validateCreate = () => {
+    const e = {};
+    if (!createForm.username.trim()) e.username = "Le nom est requis.";
+    if (!createForm.email.trim()) e.email = "L'email est requis.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.email)) e.email = "Email invalide.";
+    if (!createForm.password) e.password = "Le mot de passe est requis.";
+    else if (createForm.password.length < 6) e.password = "Minimum 6 caractères.";
+    if (createForm.password !== createForm.confirmPassword) e.confirmPassword = "Les mots de passe ne correspondent pas.";
+    setCreateErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateCreate()) return;
+    setCreateLoading(true);
+    try {
+      const res = await api.post("/auth/register", {
+        username: createForm.username,
+        email: createForm.email,
+        password: createForm.password,
+        confirmPassword: createForm.confirmPassword,
+      });
+      if (res.status === 201) {
+        await fetchAdmins();
+        setShowCreate(false);
+        toast.success("Administrateur créé avec succès");
+      }
+    } catch (err) {
+      setCreateErrors({ submit: err.response?.data?.message || "Erreur lors de la création" });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     try {
       await api.delete(`/auth/admins/${deleteTarget._id}`);
@@ -161,6 +209,9 @@ function AdminManagement() {
             <span className="navbar-eyebrow">Administration</span>
             <span className="navbar-title">Gestion des administrateurs</span>
           </div>
+          <div className="navbar-right">
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="page-content">
@@ -169,95 +220,207 @@ function AdminManagement() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>Liste des administrateurs</h3>
-                  <p>Modifier, réinitialiser le mot de passe ou supprimer un compte.</p>
+            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "20px 24px", borderBottom: "1px solid var(--border)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div className="stat-icon blue" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0 }}>
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Administrateurs</h3>
+                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                      {admins.length} compte{admins.length !== 1 ? "s" : ""} enregistré{admins.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
                 </div>
-                <div className="stat-icon blue" style={{ width: 44, height: 44, borderRadius: 10 }}>
-                  <Users size={20} />
-                </div>
+                <button className="btn btn-primary" onClick={openCreate} style={{ gap: 6, fontSize: 13 }}>
+                  <UserPlus size={14} />
+                  Nouvel admin
+                </button>
               </div>
 
+              {/* Body */}
               {loading ? (
-                <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)" }}>
+                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>
                   Chargement…
                 </div>
               ) : admins.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)" }}>
+                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-muted)", fontSize: 14 }}>
                   Aucun administrateur créé.
                 </div>
               ) : (
-                <div className="table-wrapper">
-                  <table className="pilots-table">
-                    <thead>
-                      <tr>
-                        <th>Nom</th>
-                        <th>Email</th>
-                        <th>Créé le</th>
-                        <th style={{ textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {admins.map((admin) => (
-                        <tr key={admin._id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div
-                                className="sidebar-avatar"
-                                style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}
-                              >
-                                {(admin.username || "?")
-                                  .split(" ")
-                                  .map((w) => w[0])
-                                  .join("")
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                              </div>
-                              <span>{admin.username}</span>
-                            </div>
-                          </td>
-                          <td>{admin.email}</td>
-                          <td>{formatDate(admin.createdAt)}</td>
-                          <td>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                              <button
-                                className="btn btn-ghost"
-                                style={{ padding: "6px 10px" }}
-                                onClick={() => openEdit(admin)}
-                                title="Modifier nom / email"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                className="btn btn-ghost"
-                                style={{ padding: "6px 10px" }}
-                                onClick={() => openReset(admin)}
-                                title="Réinitialiser le mot de passe"
-                              >
-                                <KeyRound size={14} />
-                              </button>
-                              <button
-                                className="btn btn-ghost"
-                                style={{ padding: "6px 10px", color: "var(--red)" }}
-                                onClick={() => setDeleteTarget(admin)}
-                                title="Supprimer"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  {admins.map((admin, i) => {
+                    const initials = (admin.username || "?")
+                      .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+                    return (
+                      <div
+                        key={admin._id}
+                        className="admin-row"
+                        style={{
+                          display: "flex", alignItems: "center",
+                          padding: "14px 24px",
+                          borderBottom: i < admins.length - 1 ? "1px solid var(--border)" : "none",
+                          gap: 16,
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div className="sidebar-avatar" style={{ width: 40, height: 40, fontSize: 13, flexShrink: 0 }}>
+                          {initials}
+                        </div>
+
+                        {/* Nom + badge */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {admin.username}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                            {admin.email}
+                          </div>
+                        </div>
+
+                        {/* Date */}
+                        <div className="admin-row-date" style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>
+                          {formatDate(admin.createdAt)}
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 10px", fontSize: 12, gap: 4 }}
+                            onClick={() => openEdit(admin)}
+                            title="Modifier"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 10px", fontSize: 12, gap: 4 }}
+                            onClick={() => openReset(admin)}
+                            title="Réinitialiser le mot de passe"
+                          >
+                            <KeyRound size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: "6px 10px", fontSize: 12, color: "var(--red)" }}
+                            onClick={() => setDeleteTarget(admin)}
+                            title="Supprimer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </motion.div>
+
         </div>
+        <Footer />
       </div>
+
+      {/* Create admin modal */}
+      <AnimatePresence>
+        {showCreate && (
+          <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
+            <motion.div
+              className="modal"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3>Créer un administrateur</h3>
+                <button className="modal-close" onClick={() => setShowCreate(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {createErrors.submit && (
+                <div className="auth-error" style={{ marginBottom: 12 }}>{createErrors.submit}</div>
+              )}
+
+              <form onSubmit={handleCreateSubmit} className="modal-form">
+                <div className="form-field">
+                  <label>Nom complet</label>
+                  <input
+                    type="text"
+                    placeholder="Nom de l'administrateur"
+                    value={createForm.username}
+                    onChange={(e) => {
+                      setCreateForm((p) => ({ ...p, username: e.target.value }));
+                      if (createErrors.username) setCreateErrors((p) => ({ ...p, username: "" }));
+                    }}
+                    disabled={createLoading}
+                    className={createErrors.username ? "input-error" : ""}
+                  />
+                  {createErrors.username && <span className="field-error">{createErrors.username}</span>}
+                </div>
+
+                <div className="form-field">
+                  <label>Adresse email</label>
+                  <input
+                    type="email"
+                    placeholder="admin@dgac.ma"
+                    value={createForm.email}
+                    onChange={(e) => {
+                      setCreateForm((p) => ({ ...p, email: e.target.value }));
+                      if (createErrors.email) setCreateErrors((p) => ({ ...p, email: "" }));
+                    }}
+                    disabled={createLoading}
+                    className={createErrors.email ? "input-error" : ""}
+                  />
+                  {createErrors.email && <span className="field-error">{createErrors.email}</span>}
+                </div>
+
+                <PasswordField
+                  label="Mot de passe"
+                  name="password"
+                  value={createForm.password}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, password: e.target.value }));
+                    if (createErrors.password) setCreateErrors((p) => ({ ...p, password: "" }));
+                  }}
+                  error={createErrors.password}
+                  disabled={createLoading}
+                />
+
+                <PasswordField
+                  label="Confirmer le mot de passe"
+                  name="confirmPassword"
+                  value={createForm.confirmPassword}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, confirmPassword: e.target.value }));
+                    if (createErrors.confirmPassword) setCreateErrors((p) => ({ ...p, confirmPassword: "" }));
+                  }}
+                  error={createErrors.confirmPassword}
+                  disabled={createLoading}
+                />
+
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowCreate(false)}>
+                    Annuler
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={createLoading}>
+                    <UserPlus size={14} />
+                    {createLoading ? "Création…" : "Créer le compte"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Edit modal */}
       <AnimatePresence>

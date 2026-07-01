@@ -19,7 +19,7 @@ export const recordHistory = async ({ pilot, pilotName, action, oldData = null, 
   });
 };
 
-export const getHistory = async ({ page = 1, limit = 10, sort = 'desc', action, search, pilotId }) => {
+export const getHistory = async ({ page = 1, limit = 10, sort = 'desc', action, search, pilotId, performedById }) => {
   const query = {};
 
   if (action && action !== 'all') {
@@ -32,6 +32,10 @@ export const getHistory = async ({ page = 1, limit = 10, sort = 'desc', action, 
 
   if (pilotId) {
     query.pilotId = pilotId;
+  }
+
+  if (performedById) {
+    query['performedBy.userId'] = performedById;
   }
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);

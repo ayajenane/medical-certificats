@@ -23,8 +23,6 @@ function Pdf1() {
     doctor_signature: "",
     class1_expiry: "",
     class2_expiry: "",
-    class3_expiry: "",
-    class4_expiry: "",
     exam_date: "",
     next_ecg: "",
     next_audiogram: "",
@@ -60,6 +58,8 @@ function Pdf1() {
     getPilots({ archived: false, sort: "name", limit: 1000 })
       .then((res) => {
         setPilots(res.data);
+        // Ne pas écraser les données si on vient d'un certificat existant
+        if (location.state?.certificate) return;
         if (!location.state?.pilot && res.data.length > 0 && !selectedPilotId) {
           const first = res.data[0];
           setSelectedPilotId(first.id);
@@ -81,8 +81,14 @@ function Pdf1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pré-remplit le formulaire si un pilote est passé depuis la page Pilotes
+  // Pré-remplit le formulaire depuis un pilote ou un certificat existant
   useEffect(() => {
+    const cert = location.state?.certificate;
+    if (cert) {
+      if (cert.pilotId) setSelectedPilotId(cert.pilotId);
+      if (cert.formData) setFormData((prev) => ({ ...prev, ...cert.formData }));
+      return;
+    }
     const pilot = location.state?.pilot;
     if (!pilot) return;
     setSelectedPilotId(pilot.id);
@@ -217,22 +223,6 @@ function Pdf1() {
           Retour aux pilotes
         </button>
 
-        <div className="pdf1-pilot-select">
-          <label htmlFor="pilot-select">Pilote associé * :</label>
-          <select
-            id="pilot-select"
-            value={selectedPilotId}
-            onChange={handleSelectPilot}
-            style={!selectedPilotId ? { borderColor: "var(--red)" } : undefined}
-          >
-            <option value="">— Sélectionner un pilote —</option>
-            {pilots.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.licenseNumber ? `(${p.licenseNumber})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {saveError && (
@@ -368,28 +358,7 @@ function Pdf1() {
                   />
                 </td>
               </tr>
-              <tr>
-                <td>Class 3</td>
-                <td>
-                  <input
-                    type="date"
-                    name="class3_expiry"
-                    value={formData.class3_expiry}
-                    onChange={handleChange}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td>Class 4</td>
-                <td>
-                  <input
-                    type="date"
-                    name="class4_expiry"
-                    value={formData.class4_expiry}
-                    onChange={handleChange}
-                  />
-                </td>
-              </tr>
+
               <tr>
                 <td>Examination Date:</td>
                 <td>

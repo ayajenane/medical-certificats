@@ -201,6 +201,28 @@ export const resetAdminPassword = async (req, res) => {
   }
 };
 
+export const updateMe = async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    if (!username?.trim() || !email?.trim()) {
+      return res.status(400).json({ message: 'Veuillez remplir tous les champs' });
+    }
+    const existing = await User.findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user._id } });
+    if (existing) {
+      return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { username: username.trim(), email: email.toLowerCase().trim() },
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;

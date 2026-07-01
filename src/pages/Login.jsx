@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Shield } from "lucide-react";
 import api from "../utils/api";
+import { useTheme } from "../context/ThemeContext";
 
 function Login() {
   const [email, setEmail]     = useState("");
@@ -10,6 +10,7 @@ function Login() {
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { setTheme } = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +28,7 @@ function Login() {
         const { token, user } = response.data;
         localStorage.setItem("token", token);
         sessionStorage.setItem("currentUser", JSON.stringify(user));
+        setTheme("light");
         navigate("/dashboard");
       }
     } catch (err) {
@@ -41,11 +43,8 @@ function Login() {
       {/* Left panel */}
       <div className="auth-left">
         <div className="auth-brand">
-          <div className="auth-brand-logo">
-            <Shield size={22} />
-          </div>
           <div>
-            <span className="auth-brand-name">MedCert</span>
+            <span className="auth-brand-name">Medical Certification</span>
             <span className="auth-brand-sub">Aviation · Maroc</span>
           </div>
         </div>
@@ -74,9 +73,7 @@ function Login() {
           </div>
         </div>
 
-        <div className="auth-left-footer">
-          © 2025 Direction Générale de l'Aviation Civile · v2.0
-        </div>
+       
       </div>
 
       {/* Right panel */}

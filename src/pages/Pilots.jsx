@@ -6,6 +6,8 @@ import {
   Pencil, Eye, ChevronLeft, ChevronRight, Clock,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
 import {
@@ -23,7 +25,6 @@ const STATUS_CONFIG = {
   unknown:  { label: "Inconnu",        cls: "badge-unknown"  },
 };
 
-const LICENSE_TYPES = ["ATPL", "CPL", "PPL", "ATCO", "Autre"];
 
 const SORT_OPTIONS = [
   { value: "-createdAt", label: "Plus récents d'abord" },
@@ -36,7 +37,7 @@ const SORT_OPTIONS = [
 
 const EMPTY_FORM = {
   name: "", email: "", licenseNumber: "", certificateNumber: "",
-  licenseType: "ATPL", nationality: "", medicalClass: "1", expiryDate: "",
+  nationality: "", medicalClass: "1", expiryDate: "",
 };
 
 const FORM_FIELDS = [
@@ -157,7 +158,7 @@ function Pilots() {
       email: pilot.email || "",
       licenseNumber: pilot.licenseNumber || "",
       certificateNumber: pilot.certificateNumber || "",
-      licenseType: pilot.licenseType || "ATPL",
+
       nationality: pilot.nationality || "",
       medicalClass: pilot.medicalClass || "1",
       expiryDate: pilot.expiryDate ? pilot.expiryDate.slice(0, 10) : "",
@@ -259,6 +260,7 @@ function Pilots() {
             <h1 className="navbar-title">Gestion des pilotes</h1>
           </div>
           <div className="navbar-right">
+            <ThemeToggle />
             <button className="btn btn-primary" onClick={openAddModal}>
               <Plus size={16} />
               Ajouter un pilote
@@ -328,7 +330,6 @@ function Pilots() {
               <div className="data-table">
                 <div className="data-table-head">
                   <span>Pilote</span>
-                  <span>Licence</span>
                   <span>Classe</span>
                   <span>Expiration</span>
                   <span>Statut</span>
@@ -345,10 +346,6 @@ function Pilots() {
                       <div>
                         <p className="pilot-name">{p.name}</p>
                         <p className="pilot-sub">{p.email}</p>
-                      </div>
-                      <div>
-                        <p className="pilot-name">{p.licenseNumber || "—"}</p>
-                        <p className="pilot-sub">{p.licenseType}</p>
                       </div>
                       <div>
                         <span className="class-badge">Classe {p.medicalClass}</span>
@@ -370,7 +367,7 @@ function Pilots() {
                       <div>
                         <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
                       </div>
-                      <div className="action-btns">
+                      <div className="action-btns" style={{ justifyContent: "flex-end" }}>
                         <button className="action-btn" title="Voir les détails" onClick={() => setViewTarget(p)}>
                           <Eye size={14} />
                         </button>
@@ -382,7 +379,7 @@ function Pilots() {
                             <button
                               className="action-btn"
                               title="Générer un certificat"
-                              onClick={() => navigate("/pdf1", { state: { pilot: p } })}
+                              onClick={() => navigate(p.medicalClass === "2" ? "/pdf2" : "/pdf1", { state: { pilot: p } })}
                             >
                               <FileText size={14} />
                             </button>
@@ -433,6 +430,7 @@ function Pilots() {
             )}
           </div>
         </main>
+        <Footer />
       </div>
 
       {/* Modal Ajouter / Modifier */}
@@ -474,24 +472,13 @@ function Pilots() {
                 ))}
 
                 <div className="form-field">
-                  <label>Type de licence</label>
-                  <select
-                    name="licenseType"
-                    value={form.licenseType}
-                    onChange={(e) => setForm((prev) => ({ ...prev, licenseType: e.target.value }))}
-                  >
-                    {LICENSE_TYPES.map((t) => <option key={t}>{t}</option>)}
-                  </select>
-                </div>
-
-                <div className="form-field">
                   <label>Classe médicale</label>
                   <select
                     name="medicalClass"
                     value={form.medicalClass}
                     onChange={(e) => setForm((prev) => ({ ...prev, medicalClass: e.target.value }))}
                   >
-                    {["1", "2", "3", "4"].map((c) => (
+                    {["1", "2"].map((c) => (
                       <option key={c} value={c}>Classe {c}</option>
                     ))}
                   </select>
@@ -598,7 +585,7 @@ function Pilots() {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Licence</span>
-                    <span className="detail-value">{viewTarget.licenseNumber || "—"} ({viewTarget.licenseType})</span>
+                    <span className="detail-value">{viewTarget.licenseNumber || "—"}</span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Classe médicale</span>

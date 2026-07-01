@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Search, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { FileText, Search, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 import { getCertificates } from "../utils/certificates";
 import { formatDate } from "../utils/historyDisplay";
 
@@ -41,8 +43,6 @@ const CERT_FORM_LABELS = {
   doctor_signature:    "Signature du médecin (AME/AMC)",
   class1_expiry:       "Expiration Classe 1",
   class2_expiry:       "Expiration Classe 2",
-  class3_expiry:       "Expiration Classe 3",
-  class4_expiry:       "Expiration Classe 4",
   exam_date:           "Date d'examen",
   next_ecg:            "Prochain ECG",
   next_audiogram:      "Prochain audiogramme",
@@ -120,6 +120,11 @@ function Certificates() {
 
   const formEntries = selected?.formData ? Object.entries(selected.formData) : [];
 
+  const handleRegenerate = (cert) => {
+    const route = cert.medicalClass === "2" ? "/pdf2" : "/pdf1";
+    navigate(route, { state: { certificate: cert } });
+  };
+
   return (
     <div className="app-layout">
       <Sidebar activePage="certificates" />
@@ -130,6 +135,9 @@ function Certificates() {
           <div className="navbar-left">
             <span className="navbar-eyebrow">Administration</span>
             <h1 className="navbar-title">Certificats médicaux</h1>
+          </div>
+          <div className="navbar-right">
+            <ThemeToggle />
           </div>
         </header>
 
@@ -205,13 +213,22 @@ function Certificates() {
                       </div>
                       <span><span className={`badge ${cfg.cls}`}>{cfg.label}</span></span>
                       <span className="pilot-sub">{new Date(c.expiryDate).toLocaleDateString("fr-FR")}</span>
-                      <button
-                        className="action-btn"
-                        title="Voir le détail"
-                        onClick={(e) => { e.stopPropagation(); setSelected(c); }}
-                      >
-                        <Eye size={14} />
-                      </button>
+                      <div className="action-btns" style={{ justifyContent: "flex-end", gap: 6 }}>
+                        <button
+                          className="action-btn"
+                          title="Voir le détail"
+                          onClick={(e) => { e.stopPropagation(); setSelected(c); }}
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          className="action-btn"
+                          title="Régénérer le PDF"
+                          onClick={(e) => { e.stopPropagation(); handleRegenerate(c); }}
+                        >
+                          <Download size={14} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -243,6 +260,7 @@ function Certificates() {
             )}
           </div>
         </main>
+        <Footer />
       </div>
 
       {/* Detail modal */}
@@ -323,6 +341,13 @@ function Certificates() {
               )}
 
               <div className="modal-actions" style={{ marginTop: 24 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => { setSelected(null); handleRegenerate(selected); }}
+                >
+                  <Download size={14} style={{ marginRight: 6 }} />
+                  Régénérer le PDF
+                </button>
                 <button className="btn btn-secondary" onClick={() => setSelected(null)}>
                   Fermer
                 </button>

@@ -5,6 +5,8 @@ import {
   UserPlus, Pencil, KeyRound, Trash2, Shield,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 import { getAdminHistory } from "../utils/adminHistory";
 import { formatDate } from "../utils/historyDisplay";
 
@@ -94,6 +96,9 @@ function AdminHistory() {
           <div className="navbar-left">
             <span className="navbar-eyebrow">Administration</span>
             <h1 className="navbar-title">Historique des administrateurs</h1>
+          </div>
+          <div className="navbar-right">
+            <ThemeToggle />
           </div>
         </header>
 
@@ -207,6 +212,7 @@ function AdminHistory() {
             )}
           </div>
         </main>
+        <Footer />
       </div>
 
       {/* Detail modal */}

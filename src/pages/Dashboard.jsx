@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  PieChart, Pie, Cell, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
+  Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
   Users, CheckCircle, AlertTriangle, XCircle,
-  FileText, Bell, Search, Calendar, Clock,
+  FileText, Search, Calendar, Clock,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 import { getPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
+import ThemeToggle from "../components/ThemeToggle";
+import NavbarUser from "../components/NavbarUser";
+import NotificationBell from "../components/NotificationBell";
 import { getDashboardStats } from "../utils/dashboard";
 import { ACTION_CONFIG, formatRelativeTime } from "../utils/historyDisplay";
 
@@ -58,16 +62,6 @@ const CustomPieTooltip = ({ active, payload }) => {
   return null;
 };
 
-const CustomBarTooltip = ({ active, payload, label }) => {
-  if (active && payload?.length) {
-    return (
-      <div className="chart-tooltip">
-        {label} : <strong>{payload[0].value}</strong>
-      </div>
-    );
-  }
-  return null;
-};
 
 const cardVariants = {
   hidden: { opacity: 0, y: 18 },
@@ -105,7 +99,6 @@ function Dashboard() {
   const stats = [
     { label: "Total pilotes",        value: dashboardStats?.totalPilots ?? activePilots.length,            note: "Hors archivés",         icon: Users,         color: "blue"   },
     { label: "Certificats actifs",   value: dashboardStats?.activeCertificates ?? validPilots.length,      note: "En cours de validité",  icon: CheckCircle,   color: "green"  },
-    { label: "Expirations proches",  value: dashboardStats?.expiringCertificates ?? expiringPilots.length, note: "< 30 jours",             icon: AlertTriangle, color: "orange" },
     { label: "Certificats expirés",  value: dashboardStats?.expiredCertificates ?? expiredPilots.length,   note: "À régulariser",          icon: XCircle,       color: "red"    },
     { label: "Certificats ce mois",  value: dashboardStats?.certificatesThisMonth ?? 0,                    note: "Générés ce mois-ci",     icon: FileText,      color: "blue"   },
   ];
@@ -116,12 +109,6 @@ function Dashboard() {
     { name: "Expirés",         value: expiredPilots.length,  color: STATUS_COLORS.expired  },
   ].filter((d) => d.value > 0);
 
-  const licenseData = ["ATPL", "CPL", "PPL", "ATCO", "Autre"]
-    .map((type) => ({
-      type,
-      count: activePilots.filter((p) => p.licenseType === type).length,
-    }))
-    .filter((d) => d.count > 0);
 
   const showAlert = !alertDismissed && (expiringPilots.length > 0 || expiredPilots.length > 0);
   const firstName = user.username?.split(" ")[0] ?? "";
@@ -153,18 +140,9 @@ function Dashboard() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button className="navbar-icon-btn" aria-label="Notifications">
-              <Bell size={17} />
-            </button>
-            <div className="navbar-user">
-              <div className="navbar-avatar">
-                {firstName ? firstName[0].toUpperCase() : "?"}
-              </div>
-              <div>
-                <p className="navbar-username">{user.username || "Inspecteur"}</p>
-                <p className="navbar-role">Inspecteur médical</p>
-              </div>
-            </div>
+            <ThemeToggle />
+            <NotificationBell />
+            <NavbarUser />
           </div>
         </header>
 
@@ -268,39 +246,67 @@ function Dashboard() {
                       iconType="circle"
                       iconSize={8}
                       formatter={(value) => (
-                        <span style={{ fontSize: 12, color: "#475569" }}>{value}</span>
+                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{value}</span>
                       )}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Bar Chart */}
+              {/* Expirations à venir */}
               <div className="card">
                 <div className="card-header">
                   <div>
-                    <h3>Pilotes par type de licence</h3>
-                    <p>Répartition selon la qualification</p>
+                    <h3>Expirations à venir</h3>
+                    <p>Certificats expirant dans les 30 prochains jours</p>
+                  </div>
+                  <div className="stat-icon orange" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }}>
+                    <Calendar size={16} />
                   </div>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={licenseData} barSize={32}>
-                    <XAxis
-                      dataKey="type"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#64748B" }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#64748B" }}
-                    />
-                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#EFF6FF" }} />
-                    <Bar dataKey="count" name="Pilotes" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {expiringPilots.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)", fontSize: 13 }}>
+                    Aucune expiration imminente.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                    {expiringPilots.slice(0, 5).map((p, i) => {
+                      const days = daysUntilExpiry(p.expiryDate);
+                      return (
+                        <div
+                          key={p.id}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "10px 0",
+                            borderBottom: i < Math.min(expiringPilots.length, 5) - 1 ? "1px solid var(--border)" : "none",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>
+                              {(p.name || "?").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Classe {p.medicalClass}</div>
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+                            background: days <= 7 ? "var(--red-bg)" : "var(--orange-bg)",
+                            color: days <= 7 ? "var(--red-text)" : "var(--orange-text)",
+                          }}>
+                            {days <= 0 ? "Expiré" : `J-${days}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {expiringPilots.length > 5 && (
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", paddingTop: 10 }}>
+                        + {expiringPilots.length - 5} autre{expiringPilots.length - 5 > 1 ? "s" : ""}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -376,6 +382,7 @@ function Dashboard() {
             </div>
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );
