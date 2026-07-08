@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+// fiche pilote : infos de base + suivi de la validité de son certificat médical
 const pilotSchema = new mongoose.Schema(
   {
     name: {
@@ -51,6 +52,7 @@ const pilotSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       virtuals: true,
+      // remplace _id par un champ id lisible côté front, retire le __v technique de mongoose
       transform: (_doc, ret) => {
         ret.id = ret._id.toString();
         delete ret._id;

@@ -6,6 +6,7 @@ import { getPilots } from "../utils/pilots";
 import { createCertificate } from "../utils/certificates";
 import "./Pdf2.css";
 
+// état initial vide du formulaire, une clé par champ du certificat classe 2
 const EMPTY_FORM = {
   state_authority: "",
   certificate_number: "",
@@ -30,6 +31,7 @@ const EMPTY_FORM = {
   last_audiogram_date: "",
 };
 
+// pré-remplit le formulaire depuis les infos du pilote, la classe médicale détermine quel champ de date recevoir
 function prefillFromPilot(prev, pilot) {
   const next = {
     ...prev,
@@ -46,6 +48,7 @@ function prefillFromPilot(prev, pilot) {
   return next;
 }
 
+// Formulaire du certificat médical Classe 2 (privé) — saisie + génération PDF + sauvegarde en base
 function Pdf2() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,8 +60,9 @@ function Pdf2() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const wrapperRef = useRef(null);
+  const wrapperRef = useRef(null); // cible de la capture html2canvas pour le PDF
 
+  // le certificat a besoin de toute la largeur d'écran, on remet le style d'origine au démontage
   useEffect(() => {
     const root = document.getElementById("root");
     const prevWidth = root.style.width;
@@ -74,6 +78,7 @@ function Pdf2() {
     };
   }, []);
 
+  // charge la liste des pilotes pour présélectionner le premier si on arrive sans contexte
   useEffect(() => {
     getPilots({ archived: false, sort: "name", limit: 1000 })
       .then((res) => {
@@ -90,6 +95,7 @@ function Pdf2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // pré-remplit le formulaire depuis un pilote ou un certificat déjà existant passé via la navigation
   useEffect(() => {
     const cert = location.state?.certificate;
     if (cert) {
@@ -103,20 +109,14 @@ function Pdf2() {
     setFormData((prev) => prefillFromPilot(prev, pilot));
   }, [location.state]);
 
+  // met à jour un champ du formulaire au fil de la saisie
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectPilot = (e) => {
-    const id = e.target.value;
-    setSelectedPilotId(id);
-    setSaveError("");
-    const pilot = pilots.find((p) => p.id === id);
-    if (pilot) setFormData((prev) => prefillFromPilot(prev, pilot));
-  };
-
   const generatePDF = async () => {
+    // import dynamique pour pas alourdir le bundle initial
     const html2canvas = (await import("html2canvas")).default;
     const { jsPDF } = await import("jspdf");
 
@@ -141,15 +141,17 @@ function Pdf2() {
     const ratio = canvas.width / canvas.height;
     let imgWidth = maxWidth;
     let imgHeight = imgWidth / ratio;
-    if (imgHeight > maxHeight) { imgHeight = maxHeight; imgWidth = imgHeight * ratio; }
+    if (imgHeight > maxHeight) { imgHeight = maxHeight; imgWidth = imgHeight * ratio; } // évite que l'image déborde en hauteur
 
     pdf.addImage(imgData, "PNG", (pageWidth - imgWidth) / 2, (pageHeight - imgHeight) / 2, imgWidth, imgHeight);
     pdf.save("certificat-classe2.pdf");
   };
 
+  // déclenche le téléchargement du PDF puis tente d'enregistrer le certificat dans le dossier du pilote
   const handleGenerate = async () => {
-    await generatePDF();
+    await generatePDF(); // le pdf est généré même si l'enregistrement en base échoue après
 
+    // sans pilote sélectionné on ne peut pas rattacher le certificat à un dossier
     if (!selectedPilotId) {
       const msg = "Sélectionnez un pilote dans la liste ci-dessus pour enregistrer ce certificat dans son dossier.";
       setSaveError(msg);
@@ -159,6 +161,7 @@ function Pdf2() {
 
     const pilot = pilots.find((p) => p.id === selectedPilotId) || location.state?.pilot;
     const mc = pilot?.medicalClass || "2";
+    // la classe 2 est utilisée comme valeur par défaut pour la classe LAPL si son champ est vide
     const expiryDate =
       mc === "1"
         ? formData.expiry_class1_single || formData.expiry_class1_other
@@ -204,6 +207,7 @@ function Pdf2() {
         </button>
       </div>
 
+      {/* message d'erreur affiché si la sauvegarde du certificat échoue */}
       {saveError && (
         <div className="alert-banner" style={{ marginBottom: 14 }}>
           <div className="alert-content">
@@ -213,6 +217,7 @@ function Pdf2() {
         </div>
       )}
 
+      {/* 4 colonnes qui reproduisent la mise en page du vrai certificat classe 2 */}
       <div className="pdf2-forms">
 
         {/* Colonne 1 — Identité du titulaire */}

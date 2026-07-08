@@ -8,6 +8,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
 import api from "../utils/api";
 
+// formate une date en "12 janv. 2026" pour la colonne "créé le" du tableau des admins
 function formatDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("fr-FR", {
@@ -15,6 +16,7 @@ function formatDate(dateStr) {
   });
 }
 
+// champ mot de passe avec bouton afficher/masquer, réutilisé dans les 3 modales (créer/reset)
 function PasswordField({ label, name, value, onChange, error, disabled }) {
   const [show, setShow] = useState(false);
   return (
@@ -52,28 +54,32 @@ function PasswordField({ label, name, value, onChange, error, disabled }) {
 function AdminManagement() {
   const toast = useToast();
 
+  // liste des comptes admin affichés dans le tableau
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // état du modal "modifier un admin"
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState({ username: "", email: "" });
   const [editErrors, setEditErrors] = useState({});
   const [editLoading, setEditLoading] = useState(false);
 
+  // état du modal "réinitialiser le mot de passe"
   const [resetTarget, setResetTarget] = useState(null);
   const [resetForm, setResetForm] = useState({ newPassword: "", confirmPassword: "" });
   const [resetErrors, setResetErrors] = useState({});
   const [resetLoading, setResetLoading] = useState(false);
 
+  // admin ciblé par la confirmation de suppression
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  // état du modal "créer un admin"
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [createErrors, setCreateErrors] = useState({});
   const [createLoading, setCreateLoading] = useState(false);
 
-  useEffect(() => { fetchAdmins(); }, []);
-
+  // charge la liste complète des comptes admin depuis le backend
   const fetchAdmins = async () => {
     setLoading(true);
     try {
@@ -86,6 +92,9 @@ function AdminManagement() {
     }
   };
 
+  useEffect(() => { fetchAdmins(); }, []);
+
+  // pré-remplit le formulaire d'édition avec les valeurs actuelles de l'admin sélectionné
   const openEdit = (admin) => {
     setEditTarget(admin);
     setEditForm({ username: admin.username, email: admin.email });
@@ -107,6 +116,7 @@ function AdminManagement() {
     setEditLoading(true);
     try {
       const res = await api.put(`/auth/admins/${editTarget._id}`, editForm);
+      // remplace juste l'admin modifié dans la liste locale, pas besoin de tout recharger
       setAdmins((prev) => prev.map((a) => (a._id === editTarget._id ? res.data.data : a)));
       setEditTarget(null);
       toast.success("Administrateur modifié avec succès");
@@ -117,6 +127,7 @@ function AdminManagement() {
     }
   };
 
+  // ouvre le modal de reset avec un formulaire vide (pas besoin des anciennes valeurs)
   const openReset = (admin) => {
     setResetTarget(admin);
     setResetForm({ newPassword: "", confirmPassword: "" });
@@ -147,6 +158,7 @@ function AdminManagement() {
     }
   };
 
+  // réinitialise le formulaire à chaque ouverture pour ne pas garder de saisie précédente
   const openCreate = () => {
     setCreateForm({ username: "", email: "", password: "", confirmPassword: "" });
     setCreateErrors({});
@@ -170,6 +182,7 @@ function AdminManagement() {
     if (!validateCreate()) return;
     setCreateLoading(true);
     try {
+      // même endpoint que l'inscription publique, mais utilisé ici par un super admin déjà connecté
       const res = await api.post("/auth/register", {
         username: createForm.username,
         email: createForm.email,
@@ -177,6 +190,7 @@ function AdminManagement() {
         confirmPassword: createForm.confirmPassword,
       });
       if (res.status === 201) {
+        // on recharge toute la liste plutôt que d'ajouter localement, plus simple et fiable
         await fetchAdmins();
         setShowCreate(false);
         toast.success("Administrateur créé avec succès");
@@ -188,6 +202,7 @@ function AdminManagement() {
     }
   };
 
+  // suppression définitive de l'admin ciblé par la confirmation
   const handleDelete = async () => {
     try {
       await api.delete(`/auth/admins/${deleteTarget._id}`);
@@ -255,6 +270,7 @@ function AdminManagement() {
               ) : (
                 <div>
                   {admins.map((admin, i) => {
+                    // initiales pour l'avatar : première lettre de chaque mot du nom, 2 max
                     const initials = (admin.username || "?")
                       .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
                     return (

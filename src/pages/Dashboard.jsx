@@ -18,6 +18,7 @@ import NotificationBell from "../components/NotificationBell";
 import { getDashboardStats } from "../utils/dashboard";
 import { ACTION_CONFIG, formatRelativeTime } from "../utils/historyDisplay";
 
+// formulaires de certificats proposés sur le dashboard (route null = fonctionnalité pas encore dispo)
 const CERT_FORMS = [
   {
     id: "pdf1",
@@ -45,12 +46,14 @@ const STATUS_COLORS = {
   expired:  "#EF4444",
 };
 
+// date du jour affichée dans la bannière de bienvenue, format long en français
 function getCurrentDate() {
   return new Date().toLocaleDateString("fr-FR", {
     day: "numeric", month: "long", year: "numeric",
   });
 }
 
+// tooltip custom pour le pie chart (recharts affiche un tooltip minimal par défaut)
 const CustomPieTooltip = ({ active, payload }) => {
   if (active && payload?.length) {
     return (
@@ -74,6 +77,7 @@ const cardVariants = {
 
 function Dashboard() {
   const navigate  = useNavigate();
+  // utilisateur lu une seule fois au montage depuis la session (pas besoin de le re-synchroniser ici)
   const [user]                        = useState(() => {
     const stored = sessionStorage.getItem("currentUser");
     return stored ? JSON.parse(stored) : null;
@@ -83,8 +87,10 @@ function Dashboard() {
   const [search, setSearch]           = useState("");
   const [alertDismissed, setAlertDismissed] = useState(false);
 
+  // redirige si pas connecté, sinon charge les pilotes et les stats du dashboard en parallèle
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
+    // limit 1000 pour récupérer à peu près tous les pilotes actifs d'un coup (pas de pagination ici)
     getPilots({ archived: false, limit: 1000 }).then((res) => setPilots(res.data)).catch(() => setPilots([]));
     getDashboardStats().then(setDashboardStats).catch(() => {});
   }, [navigate, user]);
@@ -96,6 +102,7 @@ function Dashboard() {
   const expiringPilots = activePilots.filter((p) => computeStatus(p.expiryDate) === "expiring");
   const expiredPilots  = activePilots.filter((p) => computeStatus(p.expiryDate) === "expired");
 
+  // on privilégie les stats du backend, fallback sur le calcul local si l'API a pas encore répondu
   const stats = [
     { label: "Total pilotes",        value: dashboardStats?.totalPilots ?? activePilots.length,            note: "Hors archivés",         icon: Users,         color: "blue"   },
     { label: "Certificats actifs",   value: dashboardStats?.activeCertificates ?? validPilots.length,      note: "En cours de validité",  icon: CheckCircle,   color: "green"  },
@@ -103,6 +110,7 @@ function Dashboard() {
     { label: "Certificats ce mois",  value: dashboardStats?.certificatesThisMonth ?? 0,                    note: "Générés ce mois-ci",     icon: FileText,      color: "blue"   },
   ];
 
+  // on enlève les entrées à 0 sinon le pie chart affiche des tranches vides
   const pieData = [
     { name: "Valides",         value: validPilots.length,    color: STATUS_COLORS.valid    },
     { name: "Bientôt expirés", value: expiringPilots.length, color: STATUS_COLORS.expiring },
@@ -110,9 +118,11 @@ function Dashboard() {
   ].filter((d) => d.value > 0);
 
 
+  // banniere d'alerte tant qu'elle est pas fermée manuellement et qu'il y a un truc à signaler
   const showAlert = !alertDismissed && (expiringPilots.length > 0 || expiredPilots.length > 0);
   const firstName = user.username?.split(" ")[0] ?? "";
 
+  // filtre les cartes de formulaires selon la recherche (titre ou description)
   const filteredForms = CERT_FORMS.filter((f) =>
     f.title.toLowerCase().includes(search.toLowerCase()) ||
     f.description.toLowerCase().includes(search.toLowerCase())
@@ -290,6 +300,7 @@ function Dashboard() {
                               <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Classe {p.medicalClass}</div>
                             </div>
                           </div>
+                          {/* rouge si ça expire dans moins d'une semaine, orange sinon */}
                           <span style={{
                             fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
                             background: days <= 7 ? "var(--red-bg)" : "var(--orange-bg)",

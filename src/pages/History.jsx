@@ -8,6 +8,7 @@ import Footer from "../components/Footer";
 import { getPilotHistory } from "../utils/pilotHistory";
 import { ACTION_CONFIG, formatDate, formatValue, getFieldChanges } from "../utils/historyDisplay";
 
+// clés correspondant aux valeurs d'action stockées côté backend (PilotHistory)
 const FILTERS = [
   { key: "all",                  label: "Toutes les actions" },
   { key: "PILOT_CREATED",        label: "Créations"          },
@@ -30,8 +31,9 @@ function History() {
   const [sort, setSort]             = useState("desc");
   const [page, setPage]             = useState(1);
   const [loading, setLoading]       = useState(true);
-  const [selected, setSelected]     = useState(null);
+  const [selected, setSelected]     = useState(null); // entrée d'historique affichée dans la modale de détail
 
+  // garde d'accès basique : redirige si aucune session active
   useEffect(() => {
     if (!sessionStorage.getItem("currentUser")) navigate("/login");
   }, [navigate]);
@@ -55,6 +57,7 @@ function History() {
     filtersRef.current = { filter, sort, debouncedSearch };
     const targetPage = filtersChanged ? 1 : page;
 
+    // flag "cancelled" pour ignorer la réponse d'une requête obsolète si les filtres changent entre-temps
     let cancelled = false;
     setLoading(true);
     getPilotHistory({ page: targetPage, limit: 10, sort, action: filter, search: debouncedSearch })
@@ -69,6 +72,7 @@ function History() {
     return () => { cancelled = true; };
   }, [page, filter, sort, debouncedSearch]);
 
+  // compare oldData/newData pour afficher uniquement les champs qui ont vraiment changé
   const fieldChanges = selected ? getFieldChanges(selected.oldData, selected.newData) : [];
 
   return (
@@ -111,6 +115,7 @@ function History() {
                 {f.label}
               </button>
             ))}
+            {/* bouton qui inverse juste le sens du tri, pas un vrai filtre */}
             <button
               className="tab"
               onClick={() => setSort((s) => (s === "desc" ? "asc" : "desc"))}

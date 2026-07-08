@@ -17,6 +17,7 @@ const validationError = (errors) => {
 const SORT_FIELDS = new Set(['name', 'expiryDate', 'createdAt']);
 const MEDICAL_CLASSES = ['1', '2', '3', '4'];
 
+// active si >30j avant expiration, expiring si <=30j, expired si dépassé
 export const computeStatus = (expiryDate) => {
   if (!expiryDate) return 'unknown';
   const days = Math.ceil((new Date(expiryDate) - new Date()) / 86400000);
@@ -25,13 +26,14 @@ export const computeStatus = (expiryDate) => {
   return 'active';
 };
 
-/** Met à jour le statut de tous les pilotes non archivés et journalise les expirations. */
+// recalcule le statut de chaque pilote actif, journalise seulement les nouvelles expirations
 export const syncPilotStatuses = async () => {
   const pilots = await Pilot.find({ archived: false });
 
   for (const pilot of pilots) {
     const status = computeStatus(pilot.expiryDate);
     if (status === 'expired' && pilot.lastKnownStatus !== 'expired') {
+      // transition vers "expired": on journalise l'événement (pas pour les autres transitions)
       const oldData = pilot.toJSON();
       pilot.lastKnownStatus = 'expired';
       await pilot.save();
@@ -44,24 +46,16 @@ export const syncPilotStatuses = async () => {
         performedBy: null,
       });
     } else if (status !== pilot.lastKnownStatus) {
+      // autres transitions (ex: active -> expiring): mise à jour silencieuse, pas de log
       pilot.lastKnownStatus = status;
       await pilot.save();
     }
   }
 };
 
-/**
- * Liste les pilotes avec recherche, filtres, tri et pagination.
- * @param {object} query
- * @param {string} [query.search] - recherche sur nom, email, licence, nationalité, classe médicale, n° certificat
- * @param {string} [query.status] - all | active | expiring | expired
- * @param {string} [query.archived] - 'true' | 'false'
- * @param {string} [query.medicalClass] - 1 | 2 | 3 | 4
- * @param {string} [query.sort] - name | -name | expiryDate | -expiryDate | createdAt | -createdAt
- * @param {number|string} [query.page]
- * @param {number|string} [query.limit]
- */
+// liste paginée/filtrée des pilotes, avec resynchro des statuts avant lecture
 export const listPilots = async (query = {}) => {
+  // toujours resynchroniser les statuts avant de lister, pour ne pas afficher de données périmées
   await syncPilotStatuses();
 
   const { search, status = 'all', archived, medicalClass, sort = '-createdAt', page = 1, limit = 10 } = query;
@@ -78,6 +72,7 @@ export const listPilots = async (query = {}) => {
   }
 
   if (search && search.trim()) {
+    // recherche multicritère: un seul terme testé sur plusieurs champs à la fois
     const term = search.trim();
     const regex = { $regex: term, $options: 'i' };
     const or = [
@@ -93,6 +88,7 @@ export const listPilots = async (query = {}) => {
     filter.$or = or;
   }
 
+  // tri: préfixe '-' = ordre décroissant, sinon on retombe sur createdAt si le champ n'est pas autorisé
   let sortField = sort;
   let sortOrder = 1;
   if (sortField.startsWith('-')) {
@@ -104,9 +100,11 @@ export const listPilots = async (query = {}) => {
     sortOrder = -1;
   }
 
+  // normalisation des paramètres de pagination
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.max(1, parseInt(limit, 10) || 10);
 
+  // data, count et compteurs par statut récupérés en parallèle
   const [data, total, counts] = await Promise.all([
     Pilot.find(filter)
       .sort({ [sortField]: sortOrder })
@@ -128,6 +126,7 @@ export const listPilots = async (query = {}) => {
   };
 };
 
+// répartition des pilotes actifs (non archivés) par statut, pour les cartes de stats du dashboard
 export const getStatusCounts = async () => {
   const results = await Pilot.aggregate([
     { $match: { archived: false } },
@@ -148,6 +147,7 @@ export const getPilotById = async (id) => {
   return pilot;
 };
 
+// crée un pilote et journalise l'événement PILOT_CREATED
 export const createPilot = async (data, user) => {
   const errors = validatePilotInput(data);
   if (errors.length) throw validationError(errors);
@@ -176,6 +176,7 @@ export const createPilot = async (data, user) => {
   return pilot;
 };
 
+// mise à jour partielle d'un pilote (seuls les champs présents dans updates sont modifiés)
 export const updatePilot = async (id, updates, user) => {
   const pilot = await Pilot.findById(id);
   if (!pilot) throw notFound();
@@ -185,11 +186,13 @@ export const updatePilot = async (id, updates, user) => {
 
   const oldData = pilot.toJSON();
 
+  // n'applique que les champs réellement fournis dans le body (update partiel)
   ['name', 'email', 'licenseNumber', 'certificateNumber', 'licenseType', 'nationality', 'medicalClass', 'expiryDate'].forEach((field) => {
     if (updates[field] !== undefined) {
       pilot[field] = updates[field];
     }
   });
+  // le statut dépend de expiryDate, donc on le recalcule à chaque update
   pilot.lastKnownStatus = computeStatus(pilot.expiryDate);
   await pilot.save();
 
@@ -204,6 +207,7 @@ export const updatePilot = async (id, updates, user) => {
   return pilot;
 };
 
+// renouvelle uniquement la date d'expiration d'un pilote (sans passer par un nouveau certificat)
 export const renewPilot = async (id, expiryDate, user) => {
   const pilot = await Pilot.findById(id);
   if (!pilot) throw notFound();
@@ -225,6 +229,7 @@ export const renewPilot = async (id, expiryDate, user) => {
   return pilot;
 };
 
+// archive un pilote (soft-delete: il disparaît des listes actives mais reste en base)
 export const archivePilot = async (id, user) => {
   const pilot = await Pilot.findById(id);
   if (!pilot) throw notFound();
@@ -244,6 +249,7 @@ export const archivePilot = async (id, user) => {
   return pilot;
 };
 
+// réactive un pilote précédemment archivé
 export const restorePilot = async (id, user) => {
   const pilot = await Pilot.findById(id);
   if (!pilot) throw notFound();
@@ -263,10 +269,12 @@ export const restorePilot = async (id, user) => {
   return pilot;
 };
 
+// suppression définitive d'un pilote
 export const deletePilot = async (id, user) => {
   const pilot = await Pilot.findById(id);
   if (!pilot) throw notFound();
 
+  // on garde une copie pour l'historique puisque le doc n'existera plus après
   const snapshot = pilot.toJSON();
   await pilot.deleteOne();
 

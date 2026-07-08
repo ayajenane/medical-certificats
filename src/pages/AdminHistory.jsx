@@ -10,6 +10,7 @@ import Footer from "../components/Footer";
 import { getAdminHistory } from "../utils/adminHistory";
 import { formatDate } from "../utils/historyDisplay";
 
+// libellé, style de badge et icône affichés pour chaque type d'action sur un compte admin
 const ACTION_CONFIG = {
   ADMIN_CREATED:        { label: "Admin créé",         cls: "badge-active",   icon: UserPlus  },
   ADMIN_UPDATED:        { label: "Infos modifiées",     cls: "badge-info",     icon: Pencil    },
@@ -17,6 +18,7 @@ const ACTION_CONFIG = {
   ADMIN_DELETED:        { label: "Admin supprimé",      cls: "badge-expired",  icon: Trash2    },
 };
 
+// options de l'onglet de filtrage par type d'action
 const FILTERS = [
   { key: "all",                  label: "Toutes les actions"   },
   { key: "ADMIN_CREATED",        label: "Créations"            },
@@ -25,8 +27,11 @@ const FILTERS = [
   { key: "ADMIN_DELETED",        label: "Suppressions"         },
 ];
 
+// seuls ces champs sont affichés dans le diff "champs modifiés" de la modale de détail
 const FIELD_LABELS = { username: "Nom", email: "Email" };
 
+// compare oldData/newData pour ne garder que les champs vraiment modifiés (ADMIN_UPDATED),
+// sinon (création/suppression) on liste juste les champs présents dans l'un ou l'autre
 function getFieldChanges(oldData, newData) {
   if (!oldData && !newData) return [];
   const source = newData || oldData || {};
@@ -46,6 +51,7 @@ function getFieldChanges(oldData, newData) {
 }
 
 function AdminHistory() {
+  // liste paginée de l'historique + filtres/tri appliqués (page réservée au super admin, cf. App.jsx)
   const [entries, setEntries]       = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
   const [filter, setFilter]         = useState("all");
@@ -54,16 +60,19 @@ function AdminHistory() {
   const [sort, setSort]             = useState("desc");
   const [page, setPage]             = useState(1);
   const [loading, setLoading]       = useState(true);
-  const [selected, setSelected]     = useState(null);
+  const [selected, setSelected]     = useState(null); // entrée affichée dans la modale de détail
 
+  // débounce de la recherche, évite un appel API à chaque frappe
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
+  // ref pour comparer les filtres précédents sans redéclencher ce useEffect à chaque render
   const filtersRef = useRef({ filter, sort, debouncedSearch });
 
   useEffect(() => {
+    // retour à la page 1 si un filtre a changé, sinon on garde la page courante
     const filtersChanged =
       filtersRef.current.filter !== filter ||
       filtersRef.current.sort !== sort ||

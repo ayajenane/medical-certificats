@@ -1,5 +1,6 @@
 import * as pilotHistoryService from '../services/pilotHistoryService.js';
 
+// liste paginée de l'historique des pilotes, filtrable par pilote/auteur/action/recherche libre
 export const getHistory = async (req, res) => {
   try {
     const { page, limit, sort, action, search, pilotId, performedById } = req.query;
@@ -10,6 +11,7 @@ export const getHistory = async (req, res) => {
   }
 };
 
+// une seule entrée d'historique par id, 404 explicite si elle n'existe pas (ex: id supprimé/invalide)
 export const getHistoryById = async (req, res) => {
   try {
     const entry = await pilotHistoryService.getHistoryById(req.params.id);

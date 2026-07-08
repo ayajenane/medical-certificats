@@ -1,5 +1,6 @@
 import { UserPlus, Pencil, Archive, RotateCcw, RefreshCw, XCircle, Trash2, FileText } from "lucide-react";
 
+// label affiché, classe CSS du badge et icône pour chaque type d'action de l'historique
 export const ACTION_CONFIG = {
   PILOT_CREATED:         { label: "Pilote créé",          cls: "badge-active",   icon: UserPlus  },
   PILOT_UPDATED:         { label: "Pilote modifié",       cls: "badge-info",     icon: Pencil    },
@@ -11,6 +12,7 @@ export const ACTION_CONFIG = {
   CERTIFICATE_GENERATED: { label: "Certificat généré",    cls: "badge-info",     icon: FileText  },
 };
 
+// noms lisibles en français pour les champs qu'on peut voir dans un diff d'historique
 export const FIELD_LABELS = {
   name: "Nom",
   email: "Email",
@@ -25,8 +27,10 @@ export const FIELD_LABELS = {
   status: "Statut",
 };
 
+// champs à formater comme des dates plutôt que du texte brut dans getFieldChanges/formatValue
 export const DATE_FIELDS = new Set(["expiryDate", "issueDate", "createdAt", "updatedAt"]);
 
+// date + heure complètes, utilisé pour l'entête d'une entrée d'historique
 export function formatDate(iso) {
   return new Date(iso).toLocaleString("fr-FR", {
     day: "2-digit", month: "2-digit", year: "numeric",
@@ -34,6 +38,7 @@ export function formatDate(iso) {
   });
 }
 
+// genre "il y a 5 min" au lieu d'une date brute, plus lisible dans la timeline
 export function formatRelativeTime(iso) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);
@@ -46,6 +51,7 @@ export function formatRelativeTime(iso) {
   return new Date(iso).toLocaleDateString("fr-FR");
 }
 
+// affiche une valeur de champ pour l'UI : tiret si vide, date/booléen formatés, sinon texte brut
 export function formatValue(field, value) {
   if (value === undefined || value === null || value === "") return "—";
   if (DATE_FIELDS.has(field)) return new Date(value).toLocaleDateString("fr-FR");
@@ -53,8 +59,9 @@ export function formatValue(field, value) {
   return String(value);
 }
 
-/** Calcule la liste des champs à afficher dans le détail d'une action. */
+// si oldData ET newData existent on ne garde que les champs qui ont changé (diff), sinon on affiche tout
 export function getFieldChanges(oldData, newData) {
+  // on ne garde que les champs connus (ceux qui ont un label), le reste est ignoré
   const source = newData || oldData || {};
   const fields = Object.keys(source).filter((f) => FIELD_LABELS[f]);
 
@@ -64,6 +71,7 @@ export function getFieldChanges(oldData, newData) {
         field, label: FIELD_LABELS[field],
         oldValue: oldData[field], newValue: newData[field],
       }))
+      // comparaison en string pour éviter les faux positifs (ex: 1 vs "1")
       .filter(({ oldValue, newValue }) => String(oldValue) !== String(newValue));
   }
 

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import ChangePasswordModal from "./ChangePasswordModal";
 
+// liens de navigation principaux, visibles par tous les utilisateurs connectés
 const NAV_ITEMS = [
   { key: "dashboard",    label: "Tableau de bord",     icon: LayoutDashboard, path: "/dashboard"    },
   { key: "pilots",       label: "Gestion des pilotes", icon: Users,           path: "/pilots"       },
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { key: "history",      label: "Historique",          icon: History,         path: "/history"      },
 ];
 
+// modèles de certificats disponibles; path: null + available: false = fonctionnalité pas encore prête
 const CERT_ITEMS = [
   { key: "pdf1", label: "Classe 1 — Commercial", icon: FileText, path: "/pdf1", available: true  },
   { key: "pdf2", label: "Classe 2 — Privé",      icon: FileText, path: "/pdf2", available: true  },
@@ -32,12 +34,13 @@ const ROLE_LABELS = {
   admin: "Inspecteur médical",
 };
 
+// menu latéral principal: navigation, section admin réservée aux superadmins, et bloc utilisateur/déconnexion
 function Sidebar({ activePage }) {
   const navigate = useNavigate();
   const [showChangePw, setShowChangePw] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false); // sidebar repliée en tiroir sur mobile
   const user = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
-  const isSuperAdmin = user.role === "superadmin";
+  const isSuperAdmin = user.role === "superadmin"; // conditionne l'affichage de la section Administration
 
   const initials = (user.username || "")
     .split(" ")
@@ -46,16 +49,19 @@ function Sidebar({ activePage }) {
     .toUpperCase()
     .slice(0, 2) || "?";
 
+  // bloque le scroll du body derrière le menu mobile ouvert
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  // navigue et referme automatiquement le tiroir mobile
   const goTo = (path) => {
     setMobileOpen(false);
     navigate(path);
   };
 
+  // vire la session et redirige vers le login
   const logout = () => {
     sessionStorage.removeItem("currentUser");
     localStorage.removeItem("token");
@@ -64,6 +70,7 @@ function Sidebar({ activePage }) {
 
   return (
     <>
+      {/* bouton hamburger visible uniquement quand le menu mobile est fermé */}
       {!mobileOpen && (
         <button
           className="sidebar-mobile-toggle"
@@ -74,6 +81,7 @@ function Sidebar({ activePage }) {
         </button>
       )}
 
+      {/* fond semi-transparent derrière le menu mobile, clic dessus = fermer */}
       {mobileOpen && (
         <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />
       )}
@@ -109,6 +117,7 @@ function Sidebar({ activePage }) {
             </button>
           ))}
 
+          {/* section Administration réservée aux comptes superadmin */}
           {isSuperAdmin && (
             <>
               <span className="sidebar-section" style={{ marginTop: 8 }}>
@@ -140,7 +149,7 @@ function Sidebar({ activePage }) {
             <button
               key={key}
               className={`sidebar-item${activePage === key ? " active" : ""}${!available ? " disabled" : ""}`}
-              onClick={() => available && goTo(path)}
+              onClick={() => available && goTo(path)} // clic ignoré si le certificat n'est pas encore disponible
               disabled={!available}
             >
               <Icon size={17} />
@@ -150,7 +159,7 @@ function Sidebar({ activePage }) {
           ))}
         </nav>
 
-        {/* Footer: user + logout */}
+        {/* Footer: avatar utilisateur, changement de mot de passe, déconnexion */}
         <div className="sidebar-footer">
           <div
             className="sidebar-user"

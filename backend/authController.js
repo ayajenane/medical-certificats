@@ -2,12 +2,14 @@ import User from './User.js';
 import jwt from 'jsonwebtoken';
 import { recordAdminHistory } from './services/adminHistoryService.js';
 
+// génère le JWT contenant juste l'id, le rôle est relu en DB à chaque requête via protect
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: '30d', // durée volontairement longue, pas de refresh token pour l'instant
   });
 };
 
+// création d'un compte admin, réservé au superadmin (voir isSuperAdmin sur la route)
 export const register = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
@@ -30,8 +32,9 @@ export const register = async (req, res) => {
     }
 
     user = new User({ username, email, password, role: 'admin' });
-    await user.save();
+    await user.save(); // le hash du mot de passe se fait dans le hook pre('save') du modèle
 
+    // log d'audit non bloquant : si ça échoue on ne veut pas faire échouer la création du compte
     recordAdminHistory({
       admin: user,
       action: 'ADMIN_CREATED',
@@ -55,6 +58,7 @@ export const register = async (req, res) => {
   }
 };
 
+// connexion, protégée par un rate limiter côté routes contre le brute-force
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -63,7 +67,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: 'Veuillez fournir email et mot de passe' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password'); // password exclu par défaut du schema, on le force ici
 
     if (!user) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
@@ -72,7 +76,7 @@ export const login = async (req, res) => {
     const isPasswordMatch = await user.matchPassword(password);
 
     if (!isPasswordMatch) {
-      return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+      return res.status(401).json({ message: 'Email ou mot de passe incorrect' }); // même message que "user inconnu" pour pas donner d'indice
     }
 
     const token = generateToken(user._id);
@@ -94,6 +98,7 @@ export const login = async (req, res) => {
   }
 };
 
+// liste des comptes admin (superadmin exclu implicitement par le filtre role)
 export const getAdmins = async (req, res) => {
   try {
     const admins = await User.find({ role: 'admin' }).select('-password').sort({ createdAt: -1 });
@@ -112,11 +117,13 @@ export const updateAdmin = async (req, res) => {
       return res.status(400).json({ message: 'Veuillez remplir tous les champs' });
     }
 
+    // $ne exclut l'admin courant pour ne pas se bloquer soi-même sur son propre email
     const existing = await User.findOne({ email, _id: { $ne: id } });
     if (existing) {
       return res.status(400).json({ message: 'Cet email est déjà utilisé' });
     }
 
+    // on garde l'ancien état avant update pour l'entrée d'historique (oldData/newData)
     const oldAdmin = await User.findOne({ _id: id, role: 'admin' }).select('-password');
     if (!oldAdmin) {
       return res.status(404).json({ message: 'Administrateur introuvable' });
@@ -142,6 +149,7 @@ export const updateAdmin = async (req, res) => {
   }
 };
 
+// suppression définitive d'un compte admin (pas de soft-delete côté User)
 export const deleteAdmin = async (req, res) => {
   try {
     const { id } = req.params;
@@ -164,6 +172,7 @@ export const deleteAdmin = async (req, res) => {
   }
 };
 
+// réinitialisation du mot de passe d'un admin par le superadmin (pas besoin de connaître l'ancien)
 export const resetAdminPassword = async (req, res) => {
   try {
     const { id } = req.params;
@@ -186,7 +195,7 @@ export const resetAdminPassword = async (req, res) => {
       return res.status(404).json({ message: 'Administrateur introuvable' });
     }
 
-    admin.password = newPassword;
+    admin.password = newPassword; // réaffecté puis save() pour repasser par le hook de hash, pas de findByIdAndUpdate ici
     await admin.save();
 
     recordAdminHistory({
@@ -201,6 +210,7 @@ export const resetAdminPassword = async (req, res) => {
   }
 };
 
+// mise à jour du profil de l'utilisateur connecté (pas d'historique, réservé aux comptes admin gérés par un superadmin)
 export const updateMe = async (req, res) => {
   try {
     const { username, email } = req.body;
@@ -223,6 +233,7 @@ export const updateMe = async (req, res) => {
   }
 };
 
+// changement de mot de passe par l'utilisateur lui-même, exige l'ancien mot de passe contrairement au reset admin
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import api from "../utils/api";
 import { useTheme } from "../context/ThemeContext";
 
 function Login() {
+  // champs du formulaire de connexion
   const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]     = useState("");
@@ -12,10 +13,17 @@ function Login() {
   const navigate = useNavigate();
   const { setTheme } = useTheme();
 
+  // la page de connexion s'affiche toujours en clair, même si le thème sombre
+  // est resté enregistré d'une session précédente (le mode sombre est une préférence post-connexion)
+  useEffect(() => {
+    setTheme("light");
+  }, [setTheme]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
+    // validation minimale côté client, le backend revalide de toute façon
     if (!email.trim() || !password.trim()) {
       setError("Veuillez remplir tous les champs.");
       return;
@@ -26,12 +34,13 @@ function Login() {
       const response = await api.post("/auth/login", { email, password });
       if (response.status === 200) {
         const { token, user } = response.data;
+        // token dans localStorage (persiste), user dans sessionStorage (par onglet)
         localStorage.setItem("token", token);
         sessionStorage.setItem("currentUser", JSON.stringify(user));
-        setTheme("light");
         navigate("/dashboard");
       }
     } catch (err) {
+      // message du backend si dispo, sinon message générique pour ne pas révéler l'origine de l'erreur
       setError(err.response?.data?.message || "Identifiants incorrects.");
     } finally {
       setLoading(false);
@@ -40,7 +49,7 @@ function Login() {
 
   return (
     <div className="auth-page">
-      {/* Left panel */}
+      {/* Left panel : présentation de la plateforme, purement informatif */}
       <div className="auth-left">
         <div className="auth-brand">
           <div>
@@ -76,7 +85,7 @@ function Login() {
        
       </div>
 
-      {/* Right panel */}
+      {/* Right panel : formulaire de connexion, seule partie interactive de la page */}
       <motion.div
         className="auth-right"
         initial={{ opacity: 0, x: 16 }}
@@ -90,6 +99,7 @@ function Login() {
             Entrez vos identifiants pour accéder à la plateforme.
           </p>
 
+          {/* message d'erreur affiché seulement si la validation ou l'API échoue */}
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">

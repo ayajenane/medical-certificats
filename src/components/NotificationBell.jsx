@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, AlertTriangle, XCircle, X } from "lucide-react";
 import { getPilots, computeStatus, daysUntilExpiry } from "../utils/pilots";
 
+// cloche de notifications dans la navbar, affiche les certificats expirés ou bientôt expirés
 function NotificationBell() {
-  const [open, setOpen]     = useState(false);
+  const [open, setOpen]     = useState(false); // dropdown ouvert ou fermé
   const [pilots, setPilots] = useState([]);
   const [loading, setLoading] = useState(true);
-  const ref = useRef(null);
+  const ref = useRef(null); // pour détecter les clics hors du dropdown
 
+  // récupère tous les pilotes pour pouvoir calculer les alertes côté client
   useEffect(() => {
     getPilots({ archived: false, limit: 1000 })
       .then((res) => setPilots(res.data || []))
@@ -15,21 +17,24 @@ function NotificationBell() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ferme le dropdown si on clique en dehors (seulement quand il est ouvert)
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler); // cleanup sinon fuite d'ecouteurs
   }, [open]);
 
+  // computeStatus compare expiryDate a aujourd'hui pour classer le certif
   const expired  = pilots.filter((p) => computeStatus(p.expiryDate) === "expired");
   const expiring = pilots.filter((p) => computeStatus(p.expiryDate) === "expiring");
-  const total    = expired.length + expiring.length;
+  const total    = expired.length + expiring.length; // nombre total d'alertes actives
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
+      {/* icône cloche avec badge du nombre d'alertes, clic pour ouvrir/fermer le dropdown */}
       <button
         className="navbar-icon-btn"
         aria-label="Notifications"
@@ -38,7 +43,7 @@ function NotificationBell() {
       >
         <Bell size={17} />
         {total > 0 && (
-          <span className="notif-badge">{total > 9 ? "9+" : total}</span>
+          <span className="notif-badge">{total > 9 ? "9+" : total}</span> // cap l'affichage a "9+"
         )}
       </button>
 
@@ -99,7 +104,7 @@ function NotificationBell() {
                       Expirent dans moins de 30 jours
                     </div>
                     {expiring.map((p) => {
-                      const days = daysUntilExpiry(p.expiryDate);
+                      const days = daysUntilExpiry(p.expiryDate); // nb de jours restants avant expiration
                       return (
                         <div key={p.id} className="notif-item">
                           <div className="notif-dot notif-dot-orange" />

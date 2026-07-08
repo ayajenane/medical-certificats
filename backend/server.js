@@ -1,47 +1,9 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import 'dotenv/config'; // charge le .env avant tout le reste, sinon process.env serait vide
 import connectDB from './db.js';
-import authRoutes from './authRoutes.js';
-import pilotRoutes from './routes/pilotRoutes.js';
-import pilotHistoryRoutes from './routes/pilotHistoryRoutes.js';
-import certificateRoutes from './routes/certificateRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import adminHistoryRoutes from './routes/adminHistoryRoutes.js';
-const app = express();
+import app from './app.js';
 
-// Connecter à MongoDB
+// connexion DB lancée en parallèle du démarrage HTTP, pas besoin d'attendre pour écouter le port
 connectDB();
-
-// Middlewares
-app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
-  })
-);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/pilots', pilotRoutes);
-app.use('/api/pilot-history', pilotHistoryRoutes);
-app.use('/api/certificates', certificateRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/admin-history', adminHistoryRoutes);
-
-// Route de test
-app.get('/', (req, res) => {
-  res.json({ message: 'Backend Dashboard App est actif' });
-});
-
-// Gestion des erreurs pour les routes non trouvées
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route non trouvée' });
-});
 
 const PORT = process.env.PORT || 5000;
 

@@ -12,10 +12,12 @@ import Pdf2 from "./components/Pdf2";
 import { ToastProvider } from "./context/ToastContext";
 import { ThemeProvider } from "./context/ThemeContext";
 
+// sessionStorage et pas localStorage: on veut que ça se vide à la fermeture de l'onglet
 function isAuthenticated() {
   return !!sessionStorage.getItem("currentUser");
 }
 
+// récupère l'utilisateur courant stocké en session, objet vide si absent ou JSON invalide
 function getCurrentUser() {
   try {
     return JSON.parse(sessionStorage.getItem("currentUser") || "{}");
@@ -24,14 +26,17 @@ function getCurrentUser() {
   }
 }
 
+// pages réservées aux visiteurs non connectés (ex: login) — redirige vers le dashboard si déjà connecté
 function GuestRoute({ children }) {
   return isAuthenticated() ? <Navigate to="/dashboard" replace /> : children;
 }
 
+// pages internes de l'app — redirige vers /login si pas de session active
 function ProtectedRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 }
 
+// réservé au superadmin, les autres rôles sont renvoyés vers le dashboard
 function SuperAdminRoute({ children }) {
   if (!isAuthenticated()) return <Navigate to="/login" replace />;
   const user = getCurrentUser();
@@ -41,10 +46,12 @@ function SuperAdminRoute({ children }) {
 
 function App() {
   return (
+    // le thème (light/dark) et les toasts doivent englober toutes les routes
     <ThemeProvider>
     <ToastProvider>
       <BrowserRouter>
         <Routes>
+          {/* racine renvoie toujours vers login, App/ProtectedRoute gèrent ensuite la redirection réelle */}
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/admin-management" element={<SuperAdminRoute><AdminManagement /></SuperAdminRoute>} />
           <Route path="/admin-history" element={<SuperAdminRoute><AdminHistory /></SuperAdminRoute>} />
@@ -56,6 +63,7 @@ function App() {
           <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/pdf1"      element={<ProtectedRoute><Pdf1 /></ProtectedRoute>} />
           <Route path="/pdf2"      element={<ProtectedRoute><Pdf2 /></ProtectedRoute>} />
+          {/* toute route inconnue retombe sur le dashboard plutôt qu'une 404 */}
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

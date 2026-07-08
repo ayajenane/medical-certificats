@@ -1,28 +1,18 @@
-// ============================================================
-// Sahifa dyal "Créer un admin" — ghir super admin lli kayder
-// ============================================================
-
-// Imports dyal React o les outils li khassna
 import { useState } from "react";
-import { motion } from "framer-motion"; // bach ndirou animation f l'entrée
-import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react"; // icônes
-import api from "../utils/api"; // connexion m3a le serveur
-import Sidebar from "../components/Sidebar"; // le menu dyal lysar
-import Footer from "../components/Footer"; // le pied de page
+import { motion } from "framer-motion";
+import { UserPlus, CheckCircle, Eye, EyeOff } from "lucide-react";
+import api from "../utils/api";
+import Sidebar from "../components/Sidebar";
+import Footer from "../components/Footer";
 
-// ============================================================
-// Composant PasswordField — champ dyal le mot de passe
-// kayn zr fiha bouton bach twari/tban le mot de passe
-// ============================================================
+// champ mot de passe avec bouton pour afficher/masquer, réutilisé pour password + confirmPassword
 function PasswordField({ id, name, label, placeholder, value, onChange, disabled, error }) {
-  // show: wach le mot de passe ban wla maghyarsh (*** aw text)
   const [show, setShow] = useState(false);
 
   return (
     <div className="form-field">
       <label htmlFor={id}>{label}</label>
       <div style={{ position: "relative" }}>
-        {/* ila show=true katban les caractères, ila la katban *** */}
         <input
           id={id}
           name={name}
@@ -35,7 +25,6 @@ function PasswordField({ id, name, label, placeholder, value, onChange, disabled
           style={{ paddingRight: 40 }}
         />
 
-        {/* bouton l'œil bach tbadel bin tban o ma tbanch */}
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
@@ -46,92 +35,60 @@ function PasswordField({ id, name, label, placeholder, value, onChange, disabled
           }}
           tabIndex={-1}
         >
-          {/* ila show=true: wri icône EyeOff, ila la: wri Eye */}
           {show ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
 
-      {/* ila kayn error, wrih taht l'input */}
       {error && <span className="field-error">{error}</span>}
     </div>
   );
 }
 
-// ============================================================
-// Composant principal Register — formulaire dyal créer admin
-// ============================================================
+// page réservée au super admin pour créer des comptes admin
 function Register() {
-  // form: kayhfed les valeurs li ktbhom f l'utilisateur
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPassword: "",
   });
 
-  // errors: les messages dyal l'erreur li kaybano taht kol champ
   const [errors, setErrors] = useState({});
-
-  // success: wach l'admin tkhleq b nejah wla la
   const [success, setSuccess] = useState(false);
-
-  // loading: wach l'application katsennak jawab mn serveur
   const [loading, setLoading] = useState(false);
 
-  // ============================================================
-  // validate — katcheck les champs qbel ma nsifto l serveur
-  // ============================================================
+  // valide chaque champ et remplit l'objet errors, retourne true si tout est valide
   const validate = () => {
     const e = {};
 
-    // ila l'isem khawi
     if (!form.name.trim())       e.name = "Le nom est requis.";
 
-    // ila l'email khawi
     if (!form.email.trim())      e.email = "L'email est requis.";
-    // ila l'email machi b forma sahiha (regex katcheck)
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "Adresse email invalide.";
 
-    // ila le mot de passe khawi
     if (!form.password.trim())   e.password = "Le mot de passe est requis.";
-    // ila le mot de passe qsir bzaf (khasso 6 caractères)
     else if (form.password.length < 6)
       e.password = "Minimum 6 caractères.";
 
-    // ila les 2 mots de passe ma kaynch mchi nfs chi
     if (form.password !== form.confirmPassword)
       e.confirmPassword = "Les mots de passe ne correspondent pas.";
 
     setErrors(e);
-    // ila ma kayn ta erreur,ترجع true bach nkmlo
     return Object.keys(e).length === 0;
   };
 
-  // ============================================================
-  // handleChange — ktayeb mn bach tbadel valeur f form
-  // o tmsah l'erreur dyal dak champ ila bda ykteb
-  // ============================================================
+  // met à jour le champ modifié et efface son erreur associée dès que l'utilisateur retape
   const handleChange = (e) => {
-    // kanbadlo ghir le champ li tbadel, ma nmsahch les autres
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-    // ila kayn erreur f dak champ, msahha mn badi bda ykteb
     if (errors[e.target.name]) setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
-
-    // ila kanet message dyal nejah, msahha ila bda ybdel
     if (success) setSuccess(false);
   };
 
-  // ============================================================
-  // handleSubmit — katayeb mn bach nsifto le formulaire
-  // ============================================================
   const handleSubmit = async (e) => {
-    e.preventDefault(); // manakhliw page ma trecargiwch
-
-    // ila les champs ma kamloch, wqef hna
+    e.preventDefault();
     if (!validate()) return;
 
-    setLoading(true); // kan-affichew "Création en cours..."
+    setLoading(true);
     try {
-      // nsifto les données l serveur bach nkhlqo admin jdid
+    
       const response = await api.post("/auth/register", {
         username: form.name,
         email: form.email,
@@ -139,30 +96,23 @@ function Register() {
         confirmPassword: form.confirmPassword,
       });
 
-      // ila serveur qbal o rja3 201 (Created)
       if (response.status === 201) {
-        setSuccess(true);                                          // wri message dyal nejah
-        setForm({ name: "", email: "", password: "", confirmPassword: "" }); // saffi form
-        setErrors({});                                             // msah les erreurs
+        setSuccess(true);
+        setForm({ name: "", email: "", password: "", confirmPassword: "" });
+        setErrors({});
       }
     } catch (err) {
-      // ila kayn mochkil (email mawjoud, serveur kharab...)
       setErrors({ submit: err.response?.data?.message || "Erreur lors de la création du compte." });
     } finally {
-      setLoading(false); // wqef loading fi kol l'ahwal
+      setLoading(false);
     }
   };
 
-  // ============================================================
-  // Affichage dyal la page
-  // ============================================================
   return (
     <div className="app-layout">
-      {/* Sidebar dyal lysar, active page = "create-admin" */}
       <Sidebar activePage="create-admin" />
 
       <div className="main-content">
-        {/* Navbar dyal fuq — katban isem le page */}
         <div className="navbar">
           <div className="navbar-left">
             <span className="navbar-eyebrow">Administration</span>
@@ -170,9 +120,7 @@ function Register() {
           </div>
         </div>
 
-        {/* Contenu principal — le formulaire */}
         <div className="page-content">
-          {/* motion.div bach ndirou animation dyal entrée (fade + slide mn taht) */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -185,13 +133,12 @@ function Register() {
                   <h3>Nouveau compte administrateur</h3>
                   <p>Renseignez les informations pour créer un accès administrateur.</p>
                 </div>
-                {/* icône dyal l'entête */}
                 <div className="stat-icon blue" style={{ width: 44, height: 44, borderRadius: 10 }}>
                   <UserPlus size={20} />
                 </div>
               </div>
 
-              {/* ila l'admin tkhleq b nejah, wri message vert */}
+              {/* confirmation affichée après création réussie, jusqu'à ce que l'utilisateur retouche le formulaire */}
               {success && (
                 <div className="auth-success" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <CheckCircle size={16} />
@@ -199,15 +146,13 @@ function Register() {
                 </div>
               )}
 
-              {/* ila kayn erreur mn serveur, wriyha f rouge */}
+              {/* erreur globale renvoyée par l'API (ex: email déjà utilisé) */}
               {errors.submit && (
                 <div className="auth-error" style={{ marginBottom: 16 }}>{errors.submit}</div>
               )}
 
-              {/* Le formulaire dyal l'inscription */}
               <form onSubmit={handleSubmit} className="modal-form">
 
-                {/* Champ dyal l'isem */}
                 <div className="form-field">
                   <label htmlFor="name">Nom complet</label>
                   <input
@@ -223,7 +168,6 @@ function Register() {
                   {errors.name && <span className="field-error">{errors.name}</span>}
                 </div>
 
-                {/* Champ dyal l'email */}
                 <div className="form-field">
                   <label htmlFor="email">Adresse email</label>
                   <input
@@ -239,7 +183,6 @@ function Register() {
                   {errors.email && <span className="field-error">{errors.email}</span>}
                 </div>
 
-                {/* Champ dyal le mot de passe — kayn bouton l'œil */}
                 <PasswordField
                   id="password"
                   name="password"
@@ -251,7 +194,6 @@ function Register() {
                   error={errors.password}
                 />
 
-                {/* Champ dyal tأكيد le mot de passe */}
                 <PasswordField
                   id="confirmPassword"
                   name="confirmPassword"
@@ -263,16 +205,14 @@ function Register() {
                   error={errors.confirmPassword}
                 />
 
-                {/* Bouton dyal submit */}
                 <div className="modal-actions" style={{ marginTop: 8 }}>
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={loading} // mabloch ila katsennak serveur
+                    disabled={loading}
                     style={{ width: "100%", justifyContent: "center", height: 44 }}
                   >
                     <UserPlus size={16} />
-                    {/* ila loading: wri "en cours", ila la: wri le texte normal */}
                     {loading ? "Création en cours…" : "Créer le compte administrateur"}
                   </button>
                 </div>
@@ -281,7 +221,6 @@ function Register() {
           </motion.div>
         </div>
 
-        {/* Footer dyal s-sfal dyal la page */}
         <Footer />
       </div>
     </div>

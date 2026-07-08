@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, X, Eye, EyeOff, CheckCircle } from "lucide-react";
 import api from "../utils/api";
 
+// champ de mot de passe réutilisable avec bouton oeil pour afficher/masquer la saisie
 function PasswordField({ label, name, value, onChange, error, disabled }) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(false); // true = mot de passe visible en clair
   return (
     <div className="form-field">
       <label>{label}</label>
@@ -19,6 +20,7 @@ function PasswordField({ label, name, value, onChange, error, disabled }) {
           className={error ? "input-error" : ""}
           style={{ paddingRight: 40 }}
         />
+        {/* bouton oeil positionné en overlay dans l'input pour basculer show */}
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
@@ -37,12 +39,14 @@ function PasswordField({ label, name, value, onChange, error, disabled }) {
   );
 }
 
+// modal permettant à l'utilisateur connecté de changer son propre mot de passe
 function ChangePasswordModal({ onClose }) {
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // met à jour le champ modifié et efface son erreur / le message de succès précédent
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
@@ -50,6 +54,7 @@ function ChangePasswordModal({ onClose }) {
     if (success) setSuccess(false);
   };
 
+  // valide les 3 champs avant envoi, renvoie false si au moins une erreur
   const validate = () => {
     const e = {};
     if (!form.currentPassword) e.currentPassword = "Requis.";
@@ -60,6 +65,7 @@ function ChangePasswordModal({ onClose }) {
     return Object.keys(e).length === 0;
   };
 
+  // envoie la demande de changement au backend puis réinitialise le formulaire si ça marche
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -77,6 +83,7 @@ function ChangePasswordModal({ onClose }) {
   };
 
   return (
+    // clic sur le fond ferme le modal, stopPropagation sur la carte empêche que le clic à l'intérieur ferme aussi
     <AnimatePresence>
       <div className="modal-backdrop" onClick={onClose}>
         <motion.div
@@ -94,12 +101,14 @@ function ChangePasswordModal({ onClose }) {
             </button>
           </div>
 
+          {/* bandeau de succès affiché après une modification réussie */}
           {success && (
             <div className="auth-success" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <CheckCircle size={16} />
               Mot de passe modifié avec succès.
             </div>
           )}
+          {/* erreur générale de soumission (ex: mot de passe actuel incorrect) */}
           {errors.submit && (
             <div className="auth-error" style={{ marginBottom: 12 }}>{errors.submit}</div>
           )}

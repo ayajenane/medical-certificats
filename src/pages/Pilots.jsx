@@ -18,6 +18,7 @@ import { getCertificatesByPilot } from "../utils/certificates";
 import { getPilotHistory } from "../utils/pilotHistory";
 import { ACTION_CONFIG, formatDate } from "../utils/historyDisplay";
 
+// libellé + classe CSS du badge selon le statut calculé (computeStatus dans utils/pilots)
 const STATUS_CONFIG = {
   active:   { label: "Actif",          cls: "badge-active"   },
   expiring: { label: "Expire bientôt", cls: "badge-expiring" },
@@ -35,11 +36,13 @@ const SORT_OPTIONS = [
   { value: "-expiryDate", label: "Expiration (décroissant)" },
 ];
 
+// valeurs par défaut du formulaire pilote, réutilisées pour reset après ajout/annulation
 const EMPTY_FORM = {
   name: "", email: "", licenseNumber: "", certificateNumber: "",
   nationality: "", medicalClass: "1", expiryDate: "",
 };
 
+// définition déclarative des champs texte du formulaire (sauf medicalClass, géré à part en select)
 const FORM_FIELDS = [
   { name: "name",              label: "Nom complet *",         type: "text",  placeholder: "Jean Dupont"        },
   { name: "email",             label: "Email",                 type: "email", placeholder: "pilote@example.com" },
@@ -53,10 +56,12 @@ function Pilots() {
   const navigate = useNavigate();
   const toast = useToast();
 
+  // liste paginée + compteurs par statut (affichés sur les onglets)
   const [pilots, setPilots]         = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 1 });
   const [counts, setCounts]         = useState({ all: 0, active: 0, expiring: 0, expired: 0 });
 
+  // recherche, filtres et tri de la liste
   const [search, setSearch]                 = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter]                 = useState("all");
@@ -64,21 +69,26 @@ function Pilots() {
   const [sort, setSort]                     = useState("-createdAt");
   const [page, setPage]                     = useState(1);
   const [loading, setLoading]               = useState(true);
+  // incrémenté pour forcer un re-fetch après une action (add/edit/archive/…) sans dupliquer la logique de fetch
   const [refreshTick, setRefreshTick]       = useState(0);
 
+  // état du modal d'ajout/édition d'un pilote
   const [showModal, setShowModal]   = useState(false);
   const [editingPilot, setEditingPilot] = useState(null);
   const [form, setForm]             = useState(EMPTY_FORM);
   const [formError, setFormError]   = useState("");
 
+  // état du modal "détails du pilote" (certificats + historique)
   const [viewTarget, setViewTarget]         = useState(null);
   const [viewCertificates, setViewCertificates] = useState([]);
   const [viewHistory, setViewHistory]       = useState([]);
   const [viewLoading, setViewLoading]       = useState(false);
 
+  // état du modal de renouvellement de certificat
   const [renewTarget, setRenewTarget] = useState(null);
   const [renewDate, setRenewDate]     = useState("");
 
+  // pilote ciblé par la confirmation de suppression
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const refresh = () => setRefreshTick((t) => t + 1);
@@ -89,12 +99,13 @@ function Pilots() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Revient à la page 1 lorsque les filtres/tri/recherche changent
+  // ref pour comparer les filtres précédents sans redéclencher le useEffect à chaque render
   const filtersRef = useRef({ filter, showArchived, sort, debouncedSearch });
 
   useEffect(() => {
     if (!sessionStorage.getItem("currentUser")) { navigate("/login"); return; }
 
+    // si un filtre a changé on force le retour à la page 1, sinon on garde la page courante
     const filtersChanged =
       filtersRef.current.filter !== filter ||
       filtersRef.current.showArchived !== showArchived ||
@@ -115,7 +126,7 @@ function Pilots() {
       })
       .catch(() => { if (!cancelled) toast.error("Impossible de charger les pilotes."); })
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; }; // évite de mettre à jour le state si une requête plus récente est partie entre-temps
   }, [navigate, page, filter, showArchived, sort, debouncedSearch, refreshTick, toast]);
 
   // Charge certificats + historique récent du pilote consulté
@@ -167,6 +178,7 @@ function Pilots() {
     setShowModal(true);
   };
 
+  // création ou modification selon si editingPilot est renseigné
   const handleSubmitForm = async () => {
     if (!form.name.trim() || !form.expiryDate) {
       setFormError("Le nom et la date d'expiration sont requis.");
@@ -212,6 +224,7 @@ function Pilots() {
     try {
       await deletePilot(deleteTarget.id);
       toast.success("Pilote supprimé avec succès.");
+      // si c'était le dernier de la page, on recule d'une page pour pas se retrouver sur une page vide
       if (pilots.length === 1 && pagination.page > 1) {
         setPage((p) => p - 1);
       } else {
@@ -224,6 +237,7 @@ function Pilots() {
     }
   };
 
+  // pré-remplit la nouvelle date d'expiration avec l'ancienne, l'admin n'a plus qu'à l'ajuster
   const openRenew = (pilot) => {
     setRenewTarget(pilot);
     setRenewDate(pilot.expiryDate ? pilot.expiryDate.slice(0, 10) : "");
@@ -379,6 +393,7 @@ function Pilots() {
                             <button
                               className="action-btn"
                               title="Générer un certificat"
+                              // classe 2 → formulaire pdf2, classe 1 (par défaut) → pdf1
                               onClick={() => navigate(p.medicalClass === "2" ? "/pdf2" : "/pdf1", { state: { pilot: p } })}
                             >
                               <FileText size={14} />

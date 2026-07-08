@@ -1,3 +1,5 @@
+// script de migration ponctuel : à lancer une fois pour créer l'historique des admins existants
+// avant l'introduction du modèle AdminHistory (ils n'avaient pas d'entrée ADMIN_CREATED)
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import User from '../User.js';
@@ -11,7 +13,9 @@ async function run() {
   console.log(`${admins.length} admin(s) trouvé(s)`);
 
   let created = 0;
+  // insertOne direct (pas AdminHistory.create) pour pouvoir forcer createdAt à la date réelle de l'admin
   for (const admin of admins) {
+    // évite de dupliquer l'historique si le script est relancé
     const exists = await AdminHistory.findOne({ adminId: admin._id, action: 'ADMIN_CREATED' });
     if (!exists) {
       await AdminHistory.collection.insertOne({
@@ -22,6 +26,7 @@ async function run() {
         oldData: null,
         newData: { username: admin.username, email: admin.email },
         performedBy: { userId: null, username: 'Migration', email: null },
+        // on garde la date de création réelle de l'admin, pas la date du script
         createdAt: admin.createdAt,
       });
       console.log(`  ✓ Historique créé pour : ${admin.username} (${admin.email})`);
@@ -35,4 +40,5 @@ async function run() {
   await mongoose.disconnect();
 }
 
+// exécution directe du script (node scripts/migrateAdminHistory.js), on quitte en erreur si ça plante
 run().catch((err) => { console.error(err); process.exit(1); });

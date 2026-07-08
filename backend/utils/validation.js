@@ -4,15 +4,11 @@ const MEDICAL_CLASSES = ['1', '2', '3', '4'];
 
 export const isValidEmail = (email) => EMAIL_REGEX.test(email);
 
-/**
- * Valide les données d'un pilote pour la création/mise à jour.
- * @param {object} data
- * @param {boolean} partial - si true, n'exige pas les champs requis absents (mise à jour partielle)
- * @returns {string[]} liste des erreurs (vide si valide)
- */
+// en mode partial (update), on ne râle pas si un champ requis est juste absent du body
 export const validatePilotInput = (data, { partial = false } = {}) => {
   const errors = [];
 
+  // nom requis en création, optionnel en update tant qu'il n'est pas fourni
   if (!partial || data.name !== undefined) {
     if (!data.name || !data.name.trim()) {
       errors.push('Le nom du pilote est requis.');
@@ -21,6 +17,7 @@ export const validatePilotInput = (data, { partial = false } = {}) => {
     }
   }
 
+  // même logique pour la date d'expiration: requise sauf en update partiel où elle est absente
   if (!partial || data.expiryDate !== undefined) {
     if (!data.expiryDate) {
       errors.push("La date d'expiration est requise.");
@@ -29,6 +26,7 @@ export const validatePilotInput = (data, { partial = false } = {}) => {
     }
   }
 
+  // email toujours optionnel, mais s'il est fourni il doit être valide
   if (data.email && !isValidEmail(data.email)) {
     errors.push('Adresse email invalide.');
   }
@@ -44,10 +42,7 @@ export const validatePilotInput = (data, { partial = false } = {}) => {
   return errors;
 };
 
-/**
- * Valide les données d'un certificat médical.
- * @returns {string[]} liste des erreurs (vide si valide)
- */
+// validation d'un certificat: toujours en création complète, pas de mode partiel ici
 export const validateCertificateInput = (data) => {
   const errors = [];
 
@@ -67,6 +62,7 @@ export const validateCertificateInput = (data) => {
     errors.push("La date d'expiration est requise et doit être valide.");
   }
 
+  // vérif de cohérence seulement si les deux dates sont déjà valides individuellement
   if (
     data.issueDate &&
     data.expiryDate &&

@@ -1,10 +1,12 @@
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, X } from "lucide-react";
 
+// petite notification flottante (succès/erreur), affichée via le ToastContext
 function Toast({ type, message, onClose }) {
-  const Icon = type === "success" ? CheckCircle : XCircle;
+  const Icon = type === "success" ? CheckCircle : XCircle; // icône selon succès/erreur
 
   return (
+    // glisse depuis le haut-droite et disparaît en fondu à la fermeture
     <motion.div
       className={`toast toast-${type}`}
       initial={{ opacity: 0, y: -12, x: 20 }}

@@ -8,6 +8,7 @@ import Footer from "../components/Footer";
 import { getCertificates } from "../utils/certificates";
 import { formatDate } from "../utils/historyDisplay";
 
+// libellé + classe CSS du badge selon le statut renvoyé par le backend (basé sur expiryDate)
 const STATUS_CONFIG = {
   active:   { label: "Actif",          cls: "badge-active"   },
   expiring: { label: "Expire bientôt", cls: "badge-expiring" },
@@ -30,6 +31,7 @@ const SORT_OPTIONS = [
   { value: "-expiryDate", label: "Expiration (décroissant)"  },
 ];
 
+// mapping des clés brutes du formData vers des libellés lisibles dans la modale de détail
 const CERT_FORM_LABELS = {
   // Pdf1 — Classe 1
   certificate_number:  "Numéro de certificat",
@@ -65,6 +67,7 @@ const CERT_FORM_LABELS = {
 
 function formatFormValue(value) {
   if (value === undefined || value === null || value === "") return "—";
+  // détecte le format YYYY-MM-DD pour l'afficher en date française, sinon on affiche tel quel
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(value).toLocaleDateString("fr-FR");
   return String(value);
 }
@@ -79,8 +82,9 @@ function Certificates() {
   const [sort, setSort]             = useState("-createdAt");
   const [page, setPage]             = useState(1);
   const [loading, setLoading]       = useState(true);
-  const [selected, setSelected]     = useState(null);
+  const [selected, setSelected]     = useState(null); // certificat affiché dans la modale de détail
 
+  // garde d'accès basique : redirige si aucune session active
   useEffect(() => {
     if (!sessionStorage.getItem("currentUser")) navigate("/login");
   }, [navigate]);
@@ -118,9 +122,11 @@ function Certificates() {
     return () => { cancelled = true; };
   }, [page, filter, sort, debouncedSearch]);
 
+  // détails bruts du formulaire PDF utilisé pour générer ce certificat, affichés dans la modale
   const formEntries = selected?.formData ? Object.entries(selected.formData) : [];
 
   const handleRegenerate = (cert) => {
+    // classe 2 → formulaire pdf2, classe 1 (par défaut) → pdf1
     const route = cert.medicalClass === "2" ? "/pdf2" : "/pdf1";
     navigate(route, { state: { certificate: cert } });
   };

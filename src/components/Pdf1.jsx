@@ -6,11 +6,13 @@ import { getPilots } from "../utils/pilots";
 import { createCertificate } from "../utils/certificates";
 import "./Pdf1.css";
 
+// Formulaire du certificat médical Classe 1 (commercial) — saisie + génération PDF + sauvegarde en base
 function Pdf1() {
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
 
+  // état de tous les champs du formulaire (mêmes clés que les inputs "name")
   const [formData, setFormData] = useState({
     certificate_number: "",
     holder_name: "",
@@ -37,6 +39,7 @@ function Pdf1() {
 
   const wrapperRef = useRef(null);
 
+  // le certificat a besoin de toute la largeur d'écran, on remet le style d'origine au démontage
   useEffect(() => {
     const root = document.getElementById("root");
     const prevWidth = root.style.width;
@@ -106,36 +109,19 @@ function Pdf1() {
     });
   }, [location.state]);
 
+  // met à jour un champ du formulaire au fil de la saisie
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectPilot = (e) => {
-    const id = e.target.value;
-    setSelectedPilotId(id);
-    setSaveError("");
-    const pilot = pilots.find((p) => p.id === id);
-    if (!pilot) return;
-    setFormData((prev) => {
-      const next = {
-        ...prev,
-        holder_name: pilot.name || prev.holder_name,
-        nationality: pilot.nationality || prev.nationality,
-      };
-      const classKey = `class${pilot.medicalClass}_expiry`;
-      if (classKey in next && pilot.expiryDate) {
-        next[classKey] = pilot.expiryDate.slice(0, 10);
-      }
-      return next;
-    });
-  };
-
   const generatePDF = async () => {
+    // import dynamique pour pas alourdir le bundle initial
     const html2canvas = (await import("html2canvas")).default;
     const { jsPDF } = await import("jspdf");
 
     const wrapper = wrapperRef.current;
+    // capture le formulaire en image, sans la toolbar/bouton générer
     const canvas = await html2canvas(wrapper, {
       scale: 2,
       width: wrapper.scrollWidth,
@@ -159,6 +145,7 @@ function Pdf1() {
     let imgWidth = maxWidth;
     let imgHeight = imgWidth / canvasRatio;
     if (imgHeight > maxHeight) {
+      // l'image déborderait en hauteur, on recalcule en partant de la hauteur max
       imgHeight = maxHeight;
       imgWidth = imgHeight * canvasRatio;
     }
@@ -170,9 +157,11 @@ function Pdf1() {
     pdf.save("certificate.pdf");
   };
 
+  // déclenche le téléchargement du PDF puis tente d'enregistrer le certificat dans le dossier du pilote
   const handleGenerate = async () => {
-    await generatePDF();
+    await generatePDF(); // le pdf est généré même si l'enregistrement en base échoue après
 
+    // sans pilote sélectionné on ne peut pas rattacher le certificat à un dossier
     if (!selectedPilotId) {
       const msg = "Sélectionnez un pilote dans la liste ci-dessus pour enregistrer ce certificat dans son dossier.";
       setSaveError(msg);
@@ -182,7 +171,7 @@ function Pdf1() {
 
     const pilot = pilots.find((p) => p.id === selectedPilotId) || location.state?.pilot;
     const medicalClass = pilot?.medicalClass || "1";
-    const expiryDate = formData[`class${medicalClass}_expiry`];
+    const expiryDate = formData[`class${medicalClass}_expiry`]; // la date d'expiration dépend de la classe du pilote
 
     if (!formData.certificate_number || !formData.issue_date || !expiryDate) {
       const msg =
@@ -216,7 +205,9 @@ function Pdf1() {
   };
 
   return (
+    // wrapperRef sert de cible à html2canvas pour capturer tout le certificat
     <div id="certificate-wrapper" ref={wrapperRef}>
+      {/* barre d'outils exclue de la capture PDF via ignoreElements */}
       <div className="pdf1-toolbar">
         <button type="button" className="pdf1-back-btn" onClick={() => navigate("/pilots")}>
           <ArrowLeft size={16} />
@@ -225,6 +216,7 @@ function Pdf1() {
 
       </div>
 
+      {/* message d'erreur affiché si la sauvegarde du certificat échoue */}
       {saveError && (
         <div className="alert-banner" style={{ marginBottom: 14 }}>
           <div className="alert-content">

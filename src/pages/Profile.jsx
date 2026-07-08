@@ -28,6 +28,7 @@ function Profile() {
     catch { return {}; }
   });
 
+  // photo stockée en base64 dans localStorage, une clé par utilisateur (pas envoyée au backend)
   const photoKey = `profile_photo_${user._id}`;
   const [photo, setPhoto] = useState(() => localStorage.getItem(photoKey) || null);
   const fileRef = useRef(null);
@@ -50,13 +51,9 @@ function Profile() {
   const [histPagination,  setHistPagination]  = useState({ pages: 1, total: 0 });
   const [histLoading,     setHistLoading]     = useState(true);
 
-  useEffect(() => {
-    if (!user._id) { navigate("/login"); return; }
-    loadHistory(1);
-  }, []);
-
   const loadHistory = (page) => {
     setHistLoading(true);
+    // filtré par performedById : seulement les actions faites par cet admin, pas tout l'historique
     getPilotHistory({ page, limit: 8, performedById: user._id })
       .then((res) => {
         setHistory(res.data || []);
@@ -67,11 +64,16 @@ function Profile() {
       .finally(() => setHistLoading(false));
   };
 
+  useEffect(() => {
+    if (!user._id) { navigate("/login"); return; }
+    loadHistory(1);
+  }, []);
+
   /* ── Photo ── */
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 2 * 1024 * 1024) { // limite arbitraire pour pas saturer le localStorage
       toast.error("L'image ne doit pas dépasser 2 Mo");
       return;
     }
@@ -107,6 +109,7 @@ function Profile() {
     setEditError("");
     try {
       const { data } = await api.put("/auth/me", editForm);
+      // on met à jour sessionStorage direct pour que le reste de l'app (navbar etc.) voit le nouveau nom
       const updated = { ...user, username: data.data.username, email: data.data.email };
       sessionStorage.setItem("currentUser", JSON.stringify(updated));
       setUser(updated);
@@ -147,15 +150,18 @@ function Profile() {
     }
   };
 
+  // déconnexion : on vide session + token local et on renvoie vers login
   const logout = () => {
     sessionStorage.removeItem("currentUser");
     localStorage.removeItem("token");
     navigate("/login");
   };
 
+  // initiales pour l'avatar par défaut (2 lettres max) quand il n'y a pas de photo
   const initials = (user.username || "?")
     .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
+  // date d'inscription formatée en français, "—" si absente
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : "—";
