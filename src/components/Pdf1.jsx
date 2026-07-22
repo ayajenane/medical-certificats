@@ -6,6 +6,21 @@ import { getPilots } from "../utils/pilots";
 import { createCertificate } from "../utils/certificates";
 import "./Pdf1.css";
 
+// pré-remplit le formulaire avec les données réelles du pilote (celles stockées en base)
+function prefillFromPilot(prev, pilot) {
+  const next = {
+    ...prev,
+    holder_name: pilot.name || prev.holder_name,
+    nationality: pilot.nationality || prev.nationality,
+    certificate_number: pilot.certificateNumber || prev.certificate_number,
+  };
+  const classKey = `class${pilot.medicalClass}_expiry`;
+  if (classKey in next && pilot.expiryDate) {
+    next[classKey] = pilot.expiryDate.slice(0, 10);
+  }
+  return next;
+}
+
 // Formulaire du certificat médical Classe 1 (commercial) — saisie + génération PDF + sauvegarde en base
 function Pdf1() {
   const location = useLocation();
@@ -55,33 +70,12 @@ function Pdf1() {
     };
   }, []);
 
-  // Charge la liste des pilotes pour le sélecteur et présélectionne le premier
-  // pilote afin que le certificat soit enregistré par défaut à la génération.
+  // Charge la liste des pilotes pour le sélecteur (aucune présélection automatique :
+  // le formulaire reste vide tant qu'aucun pilote n'est explicitement choisi).
   useEffect(() => {
     getPilots({ archived: false, sort: "name", limit: 1000 })
-      .then((res) => {
-        setPilots(res.data);
-        // Ne pas écraser les données si on vient d'un certificat existant
-        if (location.state?.certificate) return;
-        if (!location.state?.pilot && res.data.length > 0 && !selectedPilotId) {
-          const first = res.data[0];
-          setSelectedPilotId(first.id);
-          setFormData((prev) => {
-            const next = {
-              ...prev,
-              holder_name: first.name || prev.holder_name,
-              nationality: first.nationality || prev.nationality,
-            };
-            const classKey = `class${first.medicalClass}_expiry`;
-            if (classKey in next && first.expiryDate) {
-              next[classKey] = first.expiryDate.slice(0, 10);
-            }
-            return next;
-          });
-        }
-      })
+      .then((res) => setPilots(res.data))
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Pré-remplit le formulaire depuis un pilote ou un certificat existant
@@ -95,24 +89,23 @@ function Pdf1() {
     const pilot = location.state?.pilot;
     if (!pilot) return;
     setSelectedPilotId(pilot.id);
-    setFormData((prev) => {
-      const next = {
-        ...prev,
-        holder_name: pilot.name || prev.holder_name,
-        nationality: pilot.nationality || prev.nationality,
-      };
-      const classKey = `class${pilot.medicalClass}_expiry`;
-      if (classKey in next && pilot.expiryDate) {
-        next[classKey] = pilot.expiryDate.slice(0, 10);
-      }
-      return next;
-    });
+    setFormData((prev) => prefillFromPilot(prev, pilot));
   }, [location.state]);
 
   // met à jour un champ du formulaire au fil de la saisie
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // pré-remplit le formulaire uniquement quand l'utilisateur choisit explicitement un pilote
+  const handlePilotSelect = (e) => {
+    const pilotId = e.target.value;
+    setSelectedPilotId(pilotId);
+    if (!pilotId) return;
+    const pilot = pilots.find((p) => p.id === pilotId);
+    if (!pilot) return;
+    setFormData((prev) => prefillFromPilot(prev, pilot));
   };
 
   const generatePDF = async () => {
@@ -214,6 +207,17 @@ function Pdf1() {
           Retour aux pilotes
         </button>
 
+        <label htmlFor="pilot-select" style={{ marginLeft: 16, fontWeight: 600 }}>
+          Pilote :
+        </label>
+        <select id="pilot-select" value={selectedPilotId} onChange={handlePilotSelect} style={{ marginLeft: 8 }}>
+          <option value="">— Sélectionner un pilote —</option>
+          {pilots.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* message d'erreur affiché si la sauvegarde du certificat échoue */}

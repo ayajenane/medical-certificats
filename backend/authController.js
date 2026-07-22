@@ -10,7 +10,7 @@ const generateToken = (id) => {
 };
 
 // création d'un compte admin, réservé au superadmin (voir isSuperAdmin sur la route)
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
 
@@ -54,12 +54,12 @@ export const register = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // connexion, protégée par un rate limiter côté routes contre le brute-force
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -94,21 +94,21 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // liste des comptes admin (superadmin exclu implicitement par le filtre role)
-export const getAdmins = async (req, res) => {
+export const getAdmins = async (req, res, next) => {
   try {
     const admins = await User.find({ role: 'admin' }).select('-password').sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: admins });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-export const updateAdmin = async (req, res) => {
+export const updateAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { username, email } = req.body;
@@ -150,7 +150,7 @@ export const updateAdmin = async (req, res) => {
 };
 
 // suppression définitive d'un compte admin (pas de soft-delete côté User)
-export const deleteAdmin = async (req, res) => {
+export const deleteAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -168,12 +168,12 @@ export const deleteAdmin = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Administrateur supprimé' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // réinitialisation du mot de passe d'un admin par le superadmin (pas besoin de connaître l'ancien)
-export const resetAdminPassword = async (req, res) => {
+export const resetAdminPassword = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { newPassword, confirmPassword } = req.body;
@@ -206,12 +206,12 @@ export const resetAdminPassword = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // mise à jour du profil de l'utilisateur connecté (pas d'historique, réservé aux comptes admin gérés par un superadmin)
-export const updateMe = async (req, res) => {
+export const updateMe = async (req, res, next) => {
   try {
     const { username, email } = req.body;
     if (!username?.trim() || !email?.trim()) {
@@ -229,12 +229,12 @@ export const updateMe = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
     res.status(200).json({ success: true, data: user });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // changement de mot de passe par l'utilisateur lui-même, exige l'ancien mot de passe contrairement au reset admin
-export const changePassword = async (req, res) => {
+export const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
@@ -261,6 +261,6 @@ export const changePassword = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Mot de passe modifié avec succès' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

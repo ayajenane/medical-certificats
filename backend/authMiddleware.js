@@ -31,6 +31,6 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Token invalide' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

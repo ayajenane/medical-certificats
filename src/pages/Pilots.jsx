@@ -199,6 +199,22 @@ function Pilots() {
     }
   };
 
+  // ouvre le formulaire de certificat pré-rempli avec le dernier certificat du pilote s'il en a un
+  // (sinon formulaire vierge pré-rempli avec les seules infos connues du pilote)
+  const handleGenerateCertificate = async (pilot) => {
+    const route = pilot.medicalClass === "2" ? "/pdf2" : "/pdf1";
+    try {
+      const certs = await getCertificatesByPilot(pilot.id);
+      if (certs.length > 0) {
+        navigate(route, { state: { certificate: certs[0] } });
+        return;
+      }
+    } catch {
+      // pas de certificat récupérable : on repart d'un formulaire vierge ci-dessous
+    }
+    navigate(route, { state: { pilot } });
+  };
+
   const handleArchive = async (id) => {
     try {
       await archivePilot(id);
@@ -393,8 +409,7 @@ function Pilots() {
                             <button
                               className="action-btn"
                               title="Générer un certificat"
-                              // classe 2 → formulaire pdf2, classe 1 (par défaut) → pdf1
-                              onClick={() => navigate(p.medicalClass === "2" ? "/pdf2" : "/pdf1", { state: { pilot: p } })}
+                              onClick={() => handleGenerateCertificate(p)}
                             >
                               <FileText size={14} />
                             </button>

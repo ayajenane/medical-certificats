@@ -10,19 +10,26 @@ npm install
 
 ## Configuration
 
-Créer un fichier `.env` à la racine de `backend/` :
+Copier `.env.example` vers `.env` à la racine de `backend/` et compléter les valeurs :
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/dashboard-app
-JWT_SECRET=change_moi_en_production
+JWT_SECRET=
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
+SUPER_ADMIN_USERNAME=superadmin
+SUPER_ADMIN_EMAIL=superadmin@dgac.ma
+SUPER_ADMIN_PASSWORD=
 ```
 
 S'assurer que MongoDB tourne localement, ou remplacer `MONGODB_URI` par une URL MongoDB Atlas.
 
-> Le premier compte `superadmin` (seul habilité à créer des comptes admin) doit être créé manuellement en base — aucun script de seed automatisé n'existe actuellement.
+`JWT_SECRET` doit être une valeur forte et unique par environnement (le serveur refuse de démarrer si elle est absente ou laissée à une valeur par défaut connue) :
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
 
 ## Démarrage
 
@@ -32,6 +39,14 @@ npm start       # mode production
 ```
 
 Le serveur écoute sur `http://localhost:5000`.
+
+Créer le premier compte `superadmin` (seul habilité à créer des comptes admin) à partir des variables `SUPER_ADMIN_*` du `.env` :
+
+```bash
+npm run seed:admin
+```
+
+Le script est idempotent : il ne fait rien si un superadmin existe déjà en base.
 
 ## Tests
 
@@ -110,8 +125,9 @@ backend/
 ├── controllers/                    # req/res, délèguent aux services
 ├── services/                       # logique métier (statuts, historisation, validation)
 ├── routes/                         # endpoints + middlewares de protection
+├── middleware/                     # errorHandler (centralisé), rateLimiter (login, actions sensibles, global)
 ├── utils/validation.js             # règles de validation des entrées
-├── scripts/                        # scripts ponctuels (ex: migration d'historique admin)
+├── scripts/                        # scripts ponctuels (seed du superadmin, migration d'historique admin)
 ├── tests/dbHelper.js               # connexion à la base MongoDB de test
 ├── *.test.js                       # tests unitaires/intégration colocalisés
 └── .env                            # variables d'environnement
@@ -121,9 +137,14 @@ backend/
 
 - Mots de passe hashés avec `bcryptjs` (salt 10 tours), jamais retournés par défaut (`select: false`).
 - Authentification par JWT signé (`JWT_SECRET`), expiration 30 jours, vérifié par le middleware `protect`.
+- Le serveur refuse de démarrer si `JWT_SECRET` est absent ou laissé à sa valeur par défaut connue (voir `server.js`).
 - Contrôle d'accès par rôle (`isSuperAdmin`) sur les routes de gestion des comptes admin.
 - Validation des données côté serveur (`utils/validation.js`), indépendante du frontend.
 - En-têtes HTTP de sécurité via `helmet` (CSP, anti-clickjacking, anti-sniffing MIME...).
 - CORS restreint à l'origine du frontend (`FRONTEND_URL`), au lieu d'un `cors()` ouvert.
-- Limitation du taux de connexion (`express-rate-limit`) : 10 tentatives max / 15 min sur `/api/auth/login`, anti brute-force.
+- Limitation de débit (`express-rate-limit`, voir `middleware/rateLimiter.js`) :
+  - `/api/auth/login` : 10 tentatives / 15 min (anti brute-force).
+  - Actions sensibles sur les comptes (`register`, `reset-password`, `change-password`) : 20 / 15 min.
+  - Toute l'API (`/api/*`) : 300 requêtes / 15 min par IP, filet de sécurité général.
+- Gestion d'erreur centralisée (`middleware/errorHandler.js`) : les erreurs internes (500) ne renvoient jamais le message brut au client, seulement un message générique (le détail est loggé côté serveur).
 - Traçabilité systématique : toute mutation d'un pilote ou d'un compte admin génère une entrée d'historique.

@@ -3,7 +3,7 @@ import * as certificateService from '../services/certificateService.js';
 import * as pilotHistoryService from '../services/pilotHistoryService.js';
 
 // agrège les chiffres affichés sur le tableau de bord (cartes + activité récente)
-export const getStats = async (req, res) => {
+export const getStats = async (req, res, next) => {
   try {
     // recalcule les statuts (actif/expirant/expiré) avant de sortir les compteurs
     await pilotService.syncPilotStatuses();
@@ -28,6 +28,6 @@ export const getStats = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ message: error.message });
+    next(error);
   }
 };

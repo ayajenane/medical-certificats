@@ -37,6 +37,7 @@ function prefillFromPilot(prev, pilot) {
     ...prev,
     holder_name: pilot.name || prev.holder_name,
     nationality: pilot.nationality || prev.nationality,
+    certificate_number: pilot.certificateNumber || prev.certificate_number,
   };
   if (pilot.expiryDate) {
     const d = pilot.expiryDate.slice(0, 10);
@@ -78,21 +79,12 @@ function Pdf2() {
     };
   }, []);
 
-  // charge la liste des pilotes pour présélectionner le premier si on arrive sans contexte
+  // charge la liste des pilotes pour le sélecteur (aucune présélection automatique :
+  // le formulaire reste vide tant qu'aucun pilote n'est explicitement choisi).
   useEffect(() => {
     getPilots({ archived: false, sort: "name", limit: 1000 })
-      .then((res) => {
-        setPilots(res.data);
-        // Ne pas écraser les données si on vient d'un certificat existant
-        if (location.state?.certificate) return;
-        if (!location.state?.pilot && res.data.length > 0 && !selectedPilotId) {
-          const first = res.data[0];
-          setSelectedPilotId(first.id);
-          setFormData((prev) => prefillFromPilot(prev, first));
-        }
-      })
+      .then((res) => setPilots(res.data))
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // pré-remplit le formulaire depuis un pilote ou un certificat déjà existant passé via la navigation
@@ -113,6 +105,16 @@ function Pdf2() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // pré-remplit le formulaire uniquement quand l'utilisateur choisit explicitement un pilote
+  const handlePilotSelect = (e) => {
+    const pilotId = e.target.value;
+    setSelectedPilotId(pilotId);
+    if (!pilotId) return;
+    const pilot = pilots.find((p) => p.id === pilotId);
+    if (!pilot) return;
+    setFormData((prev) => prefillFromPilot(prev, pilot));
   };
 
   const generatePDF = async () => {
@@ -205,6 +207,18 @@ function Pdf2() {
           <ArrowLeft size={16} />
           Retour aux pilotes
         </button>
+
+        <label htmlFor="pilot-select-2" style={{ marginLeft: 16, fontWeight: 600 }}>
+          Pilote :
+        </label>
+        <select id="pilot-select-2" value={selectedPilotId} onChange={handlePilotSelect} style={{ marginLeft: 8 }}>
+          <option value="">— Sélectionner un pilote —</option>
+          {pilots.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* message d'erreur affiché si la sauvegarde du certificat échoue */}
